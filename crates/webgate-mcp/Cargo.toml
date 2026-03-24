@@ -1,0 +1,23 @@
+[package]
+name = "webgate-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Denoised web search MCP server — native binary, zero runtime dependencies."
+
+[[bin]]
+name = "mcp-webgate"
+path = "src/main.rs"
+
+[dependencies]
+webgate = { path = "../webgate" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# MCP server SDK
+# rmcp = "0.1"  # TODO: uncomment when ready to integrate MCP

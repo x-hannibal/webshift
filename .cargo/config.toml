@@ -1,0 +1,4 @@
+[env]
+VCPKG_ROOT = "C:\\vcpkg"
+VCPKGRS_DYNAMIC = "1"
+LIBCLANG_PATH = "C:\\Program Files\\LLVM\\bin"

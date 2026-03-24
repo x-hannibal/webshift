@@ -1,0 +1,17 @@
+[workspace]
+members = ["crates/webgate", "crates/webgate-mcp"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Hannibal <annibale.x@gmail.com>"]
+repository = "https://github.com/annibale-x/webgate"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"

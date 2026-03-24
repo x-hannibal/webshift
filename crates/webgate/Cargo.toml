@@ -1,0 +1,42 @@
+[package]
+name = "webgate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Denoised web search library — fetch, clean, and rerank web content for AI agents."
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+# HTTP client (streaming support critical for size cap)
+reqwest = { version = "0.12", features = ["stream", "gzip", "brotli"] }
+futures = "0.3"
+
+# HTML parsing — libxml2 bindings (same engine as Python lxml)
+libxml = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Text processing
+regex = "1"
+rand = "0.8"
+url = "2"
+
+# Error handling
+thiserror = "2"
+
+# Logging
+tracing = "0.1"
+
+# Async trait (for SearchBackend)
+async-trait = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "test-util"] }
+wiremock = "0.6"
