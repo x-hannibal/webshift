@@ -550,18 +550,18 @@ pub struct QueryResult {
 
 ### M3 — Search backends + query pipeline (1 week)
 
-- [ ] `backends/mod.rs` — `SearchBackend` trait
-- [ ] `backends/searxng.rs` — first backend
-- [ ] `backends/brave.rs`
-- [ ] `backends/tavily.rs`
-- [ ] `backends/exa.rs`
-- [ ] `backends/serpapi.rs`
-- [ ] `utils/reranker.rs` — BM25 deterministic reranking
-- [ ] Full query pipeline: search → dedup → fetch → clean → rerank → assemble
-- [ ] `webgate_query` MCP tool
-- [ ] `webgate::query()` public library API
-- [ ] Tests: backends (mock HTTP), full pipeline integration
-- [ ] **Deliverable:** Feature parity with Python Phase 1–3 (no LLM)
+- [x] `backends/mod.rs` — `SearchBackend` trait + `SearchResult` + `create_backend` factory
+- [x] `backends/searxng.rs` — first backend
+- [x] `backends/brave.rs`
+- [x] `backends/tavily.rs`
+- [x] `backends/exa.rs`
+- [x] `backends/serpapi.rs`
+- [x] `utils/reranker.rs` — BM25 deterministic reranking + adaptive budget redistribution
+- [x] Full query pipeline: search → dedup → fetch → clean → rerank → assemble
+- [x] `webgate_query` MCP tool (with `StringOrList` queries param)
+- [x] `webgate::query()` and `webgate::query_with_options()` public library API
+- [x] Tests: backend factory (4), SearXNG mock (4), BM25 reranker (6), pipeline integration (8), MCP query params (3)
+- [x] **Deliverable:** Feature parity with Python Phase 1–3 (no LLM)
 
 ### M4 — LLM features (1 week)
 

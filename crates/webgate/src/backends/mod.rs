@@ -1,10 +1,16 @@
 //! Search backend trait and implementations.
+//!
+//! Each backend wraps a search engine API (SearXNG, Brave, Tavily, Exa, SerpAPI)
+//! behind the `SearchBackend` trait. The `create_backend` factory selects one
+//! based on `config.backends.default`.
 
-pub mod searxng;
 pub mod brave;
-pub mod tavily;
 pub mod exa;
+pub mod searxng;
 pub mod serpapi;
+pub mod tavily;
+
+use crate::config::BackendsConfig;
 
 /// A single search result from a backend.
 #[derive(Debug, Clone)]
@@ -23,4 +29,68 @@ pub trait SearchBackend: Send + Sync {
         num_results: usize,
         lang: Option<&str>,
     ) -> Result<Vec<SearchResult>, crate::WebgateError>;
+}
+
+/// Create a backend from config. Returns a boxed trait object.
+pub fn create_backend(
+    config: &BackendsConfig,
+) -> Result<Box<dyn SearchBackend>, crate::WebgateError> {
+    create_backend_by_name(&config.default, config)
+}
+
+/// Create a specific backend by name.
+pub fn create_backend_by_name(
+    name: &str,
+    config: &BackendsConfig,
+) -> Result<Box<dyn SearchBackend>, crate::WebgateError> {
+    match name {
+        "searxng" => Ok(Box::new(searxng::SearxngBackend::new(&config.searxng))),
+        "brave" => Ok(Box::new(brave::BraveBackend::new(&config.brave)?)),
+        "tavily" => Ok(Box::new(tavily::TavilyBackend::new(&config.tavily)?)),
+        "exa" => Ok(Box::new(exa::ExaBackend::new(&config.exa)?)),
+        "serpapi" => Ok(Box::new(serpapi::SerpapiBackend::new(&config.serpapi)?)),
+        other => Err(crate::WebgateError::Backend(format!(
+            "unknown backend: {other}"
+        ))),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::BackendsConfig;
+
+    #[test]
+    fn create_backend_searxng() {
+        let config = BackendsConfig::default(); // default is "searxng"
+        let backend = create_backend(&config);
+        assert!(backend.is_ok());
+    }
+
+    #[test]
+    fn create_backend_unknown() {
+        let mut config = BackendsConfig::default();
+        config.default = "nonexistent".to_string();
+        let result = create_backend(&config);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn create_backend_brave_needs_api_key() {
+        let mut config = BackendsConfig::default();
+        config.default = "brave".to_string();
+        let result = create_backend(&config);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn create_backend_by_name_works() {
+        let config = BackendsConfig::default();
+        let backend = create_backend_by_name("searxng", &config);
+        assert!(backend.is_ok());
+    }
 }

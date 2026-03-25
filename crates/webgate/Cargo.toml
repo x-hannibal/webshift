@@ -17,7 +17,7 @@ llm = []
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 
 # HTTP client (streaming support critical for size cap)
-reqwest = { version = "0.12", features = ["stream", "gzip", "brotli"] }
+reqwest = { version = "0.12", features = ["stream", "gzip", "brotli", "json"] }
 futures = "0.3"
 
 # HTML parsing — pure Rust, no system deps

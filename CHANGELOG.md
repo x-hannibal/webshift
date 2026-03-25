@@ -1,5 +1,19 @@
 # Changelog
 
+* **2026-03-25: v0.1.5** - M3 complete — search backends + query pipeline
+  * feat(backends): `SearchBackend` trait + `create_backend` factory with 5 implementations (SearXNG, Brave, Tavily, Exa, SerpAPI)
+  * feat(reranker): BM25 deterministic reranking + adaptive budget redistribution
+  * feat(query): full pipeline — search → dedup → fetch → clean → rerank → assemble with oversampling and gap filler
+  * feat(query): `webgate::query()` and `webgate::query_with_options()` public API
+  * feat(mcp): `webgate_query` tool with `StringOrList` queries param, backend override, lang support
+  * test(backends): factory tests (4), SearXNG wiremock tests (4)
+  * test(reranker): BM25 scoring, ranking, budget redistribution (6 tests)
+  * test(pipeline): integration tests with mock search + mock pages (8 tests)
+  * test(mcp): QueryParams deserialization tests (3 tests)
+  * docs(plan): check off all M3 tasks
+
+---
+
 * **2026-03-25: v0.1.4** - M2 tests + robot auto-commit
   * test(mcp): server construction, onboarding JSON, CLI parsing, param deserialization (10 new tests)
   * feat(robot): `bump` now auto-commits all tracked changes (not just Cargo/CHANGELOG)

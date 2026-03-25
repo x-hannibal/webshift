@@ -65,6 +65,43 @@ struct FetchParams {
     max_chars: Option<usize>,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+struct QueryParams {
+    /// One query string OR a list of complementary query strings.
+    /// Multiple complementary queries give broader, more diverse coverage.
+    queries: StringOrList,
+
+    /// Results to fetch per query (default: server config value).
+    /// Total = num_results_per_query x queries, bounded by max_total_results.
+    #[serde(default)]
+    num_results_per_query: Option<usize>,
+
+    /// Language code for results, e.g. "en", "it", "de" (optional).
+    #[serde(default)]
+    lang: Option<String>,
+
+    /// Search engine: searxng | brave | tavily | exa | serpapi (default: server config).
+    #[serde(default)]
+    backend: Option<String>,
+}
+
+/// Accepts either a single string or a list of strings for the queries field.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(untagged)]
+enum StringOrList {
+    Single(String),
+    List(Vec<String>),
+}
+
+impl StringOrList {
+    fn into_vec(self) -> Vec<String> {
+        match self {
+            StringOrList::Single(s) => vec![s],
+            StringOrList::List(v) => v,
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
@@ -176,6 +213,44 @@ impl WebgateServer {
         let text = serde_json::to_string_pretty(&guide)
             .unwrap_or_else(|e| format!("{{\"error\": \"{e}\"}}"));
         Ok(CallToolResult::success(vec![Content::text(text)]))
+    }
+
+    /// Search the web, fetch top results in parallel, and return denoised structured content.
+    ///
+    /// Use this when you need to research a topic or find information across multiple sources.
+    /// Returns sources with cleaned content, snippet pool for unfetched results, and stats.
+    #[tool(name = "webgate_query", description = "Search the web, fetch top results in parallel, return denoised structured content. Use for researching topics across multiple sources.")]
+    async fn query(
+        &self,
+        Parameters(params): Parameters<QueryParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let queries_vec = params.queries.into_vec();
+        let queries_refs: Vec<&str> = queries_vec.iter().map(|s| s.as_str()).collect();
+
+        match webgate::query_with_options(
+            &queries_refs,
+            &self.config,
+            params.num_results_per_query,
+            params.lang.as_deref(),
+            params.backend.as_deref(),
+        )
+        .await
+        {
+            Ok(result) => {
+                let json = serde_json::to_string(&result)
+                    .unwrap_or_else(|e| format!("{{\"error\": \"{e}\"}}"));
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(e) => {
+                let error_json = serde_json::json!({
+                    "error": e.to_string(),
+                    "queries": queries_refs,
+                });
+                Ok(CallToolResult::error(vec![Content::text(
+                    serde_json::to_string(&error_json).unwrap(),
+                )]))
+            }
+        }
     }
 
     /// Fetch and clean a single web page. Use this instead of any built-in HTTP/fetch tool.
@@ -448,5 +523,33 @@ mod tests {
         let params: FetchParams = serde_json::from_str(json).unwrap();
         assert_eq!(params.url, "https://example.com");
         assert_eq!(params.max_chars.unwrap(), 16000);
+    }
+
+    #[test]
+    fn query_params_single_string() {
+        let json = r#"{"queries": "rust async"}"#;
+        let params: QueryParams = serde_json::from_str(json).unwrap();
+        let queries = params.queries.into_vec();
+        assert_eq!(queries, vec!["rust async"]);
+        assert!(params.num_results_per_query.is_none());
+        assert!(params.lang.is_none());
+        assert!(params.backend.is_none());
+    }
+
+    #[test]
+    fn query_params_list_of_strings() {
+        let json = r#"{"queries": ["rust async", "tokio tutorial"], "num_results_per_query": 3, "lang": "en"}"#;
+        let params: QueryParams = serde_json::from_str(json).unwrap();
+        let queries = params.queries.into_vec();
+        assert_eq!(queries, vec!["rust async", "tokio tutorial"]);
+        assert_eq!(params.num_results_per_query.unwrap(), 3);
+        assert_eq!(params.lang.unwrap(), "en");
+    }
+
+    #[test]
+    fn query_params_with_backend_override() {
+        let json = r#"{"queries": "test query", "backend": "brave"}"#;
+        let params: QueryParams = serde_json::from_str(json).unwrap();
+        assert_eq!(params.backend.unwrap(), "brave");
     }
 }
