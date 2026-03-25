@@ -1501,7 +1501,7 @@ dependencies = [
 
 [[package]]
 name = "robot"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "clap",
  "toml",
@@ -2370,7 +2370,7 @@ dependencies = [
 
 [[package]]
 name = "webgate"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "futures",
@@ -2390,7 +2390,7 @@ dependencies = [
 
 [[package]]
 name = "webgate-mcp"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "clap",
  "serde_json",
