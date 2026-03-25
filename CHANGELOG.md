@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.10] - 2026-03-25
+
+### Added
+
+- `AdaptiveBudget` enum with three modes: `"auto"` (default), `"on"`, `"off"` — replaces the previous boolean `adaptive_budget` flag
+- Auto mode uses a dominance ratio heuristic (threshold 1.5) to decide at runtime whether proportional budget allocation would make a meaningful difference
+- Custom serde deserializer for `AdaptiveBudget` accepts both TOML booleans (`true`/`false`) and strings (`"auto"`/`"on"`/`"off"`) for backward compatibility
+- Harness report displays the resolved auto decision with the dominance ratio value (e.g. `auto (→ on, dominance 1.85)`)
+- `docs/CONFIGURATION.md` — complete configuration reference covering all TOML keys, environment variables, and CLI arguments with plain-language descriptions
+- `docs/USE_CASES.md` — 10 real-world configuration examples (local-only, cloud, tight budget, research mode, custom HTTP backend, domain filtering, etc.)
+- `docs/UNDER_THE_HOOD.md` — detailed pipeline documentation with BM25 formulas, denoising stages, compression chain, and real harness output examples
+- Compression percentage in harness output now shows one decimal (e.g. `99.3%` instead of `99%`)
+
+### Changed
+
+- Default value of `server.adaptive_budget` changed from `false` to `"auto"`
+- `WEBGATE_ADAPTIVE_BUDGET` environment variable now accepts `"auto"`, `"on"`, `"off"` (in addition to `"true"`/`"false"` for backward compatibility)
+- `README.md` restructured with links to the three new documentation pages
+- Flat truncation in `lib.rs` now uses multibyte-safe `.chars().take(N)` instead of byte-slice truncation
+
+---
+
 ## [0.1.9] - 2026-03-25
 
 ### Added
