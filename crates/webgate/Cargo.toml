@@ -33,6 +33,9 @@ regex = "1"
 rand = "0.8"
 url = "2"
 
+# Directories (home dir for config file search)
+dirs-next = "2"
+
 # Error handling
 thiserror = "2"
 

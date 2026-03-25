@@ -530,7 +530,7 @@ pub struct QueryResult {
 ### M1 — Core library: fetch + clean (1 week)
 
 - [x] Workspace setup: add `robot` crate, feature flags skeleton, shared version
-- [ ] `config.rs` — serde config with toml + env + clap
+- [x] `config.rs` — serde config with toml + env + clap
 - [x] `scraper/cleaner.rs` — html5ever/scraper HTML cleaning + text sterilization pipeline
 - [x] `scraper/fetcher.rs` — reqwest concurrent fetcher with streaming cap, UA rotation, retry
 - [x] `utils/url.rs` — sanitize, dedup, binary filter, domain filter
