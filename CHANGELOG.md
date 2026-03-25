@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.9] - 2026-03-25
+
+### Added
+
+- `ServerConfig.language` — BCP-47 language tag (default `"en"`) passed to all search backends as fallback when no per-call language override is provided; prevents foreign-language results from SearXNG and similar backends
+- `Stats.raw_bytes` — total raw HTML bytes downloaded before cleaning, used for compression-ratio reporting
+- `robot harness`: COMPRESSION block showing raw download → clean text → LLM summary sizes (KB) with percentage reduction at each stage
+- `robot harness`: `box_header()` helper with Unicode box-drawing characters for visual section separation
+- `robot harness`: CONTENT PREVIEWS block with per-source `TITLE:` / `PREVIEW:` fields at column 1
+- `robot harness`: full `#[ignore]` integration tests for Google, Bing, and HTTP backends in `crates/webgate/tests/`
+
+### Changed
+
+- `robot harness` output restructured: snippet pool → content previews → LLM summary → consolidated report at the bottom
+- `robot harness` SOURCES table: removed title/url columns (correlation via `[id]` citation in content previews); all rows start at column 1
+- `robot harness` banner changed to uppercase `WEBGATE HARNESS REPORT`
+- Progress bars use Unicode block characters (`█`/`░`) instead of `#`
+- `fetch_timing` map is now fully propagated (both primary and gap-fill fetches) so `raw_bytes` includes all downloads
+- `language` in `lib.rs` resolved with config fallback: per-call `lang` overrides `ServerConfig.language`; empty string disables the hint
+- `README.md`: documented LLM cross-language normalization as a bonus feature (foreign-language pages summarized in prompt language)
+
+### Fixed
+
+- `reranker.rs`: panic on multibyte UTF-8 content (e.g. Chinese) when slicing `content[..3000]` at a byte boundary; replaced with `.chars().take(3000).collect()`
+
+---
+
 ## [0.1.8] - 2026-03-25
 
 ### Added

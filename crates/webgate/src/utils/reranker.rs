@@ -65,11 +65,7 @@ fn bm25_scores(query_tokens: &[String], docs: &[String], k1: f64, b: f64) -> Vec
 /// Build a BM25 document string from a source: title + snippet + first 3000 chars of content.
 fn source_to_doc(source: &Source) -> String {
     let snippet = source.snippet.as_deref().unwrap_or("");
-    let content_prefix = if source.content.len() > 3000 {
-        &source.content[..3000]
-    } else {
-        &source.content
-    };
+    let content_prefix: String = source.content.chars().take(3000).collect();
     format!("{} {} {}", source.title, snippet, content_prefix)
 }
 

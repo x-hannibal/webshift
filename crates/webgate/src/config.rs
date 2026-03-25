@@ -45,6 +45,9 @@ pub struct ServerConfig {
     pub trace: bool,
     pub adaptive_budget: bool,
     pub adaptive_budget_fetch_factor: u32,
+    /// BCP-47 language tag passed to search backends (e.g. "en", "it", "all").
+    /// Empty string = let the backend decide.
+    pub language: String,
 }
 
 impl Default for ServerConfig {
@@ -66,6 +69,7 @@ impl Default for ServerConfig {
             trace: false,
             adaptive_budget: false,
             adaptive_budget_fetch_factor: 3,
+            language: "en".to_string(),
         }
     }
 }

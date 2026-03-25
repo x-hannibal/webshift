@@ -156,29 +156,16 @@ When completing tasks from PLAN.md milestones, check them off (`- [x]`) immediat
 
 Do NOT add Co-Authored-By tags to commit messages.
 
-Commit entries follow this format:
-
-```
-<type>(<scope>): <title>
-
-  - <type>(<scope>): <description>
-  - ...
-
----
-
-```
+Git commit messages use `type(scope): description` format.
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 
 Examples:
 ```
-feat(search): implement fuzzy search for products
-- feat(query): add oversampling gap filler
-- fix(cleaner): resolve BiDi regex false positive
-- chore(deps): bump mcp to 1.3.0
+feat(query): add oversampling gap filler
+fix(cleaner): resolve BiDi regex false positive
+chore(deps): bump mcp to 1.3.0
 ```
-
-Git commit messages use the same `type(scope): description` format (no version header).
 
 ## Changelog convention
 

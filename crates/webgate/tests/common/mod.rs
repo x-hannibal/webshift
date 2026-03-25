@@ -35,6 +35,7 @@ pub struct TestServerConfig {
     pub max_total_results: usize,
     pub max_query_budget: usize,
     pub search_timeout: u64,
+    pub language: String,
 }
 
 impl Default for TestServerConfig {
@@ -43,6 +44,7 @@ impl Default for TestServerConfig {
             max_total_results: 5,
             max_query_budget: 16_000,
             search_timeout: 10,
+            language: "en".to_string(),
         }
     }
 }
@@ -60,6 +62,9 @@ pub struct TestBackendsConfig {
     pub tavily: TestTavily,
     pub exa: TestExa,
     pub serpapi: TestSerpapi,
+    pub google: TestGoogle,
+    pub bing: TestBing,
+    pub http: TestHttp,
 }
 
 fn default_backend() -> String {
@@ -163,6 +168,58 @@ impl Default for TestSerpapi {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct TestGoogle {
+    pub enabled: bool,
+    pub api_key: String,
+    pub cx: String,
+}
+
+impl Default for TestGoogle {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            api_key: String::new(),
+            cx: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct TestBing {
+    pub enabled: bool,
+    pub api_key: String,
+    pub market: String,
+}
+
+impl Default for TestBing {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            api_key: String::new(),
+            market: "en-US".into(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct TestHttp {
+    pub enabled: bool,
+    pub url: String,
+}
+
+impl Default for TestHttp {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            url: String::new(),
+        }
+    }
+}
+
 // ── LLM ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
@@ -225,6 +282,15 @@ impl TestConfig {
         if self.backends.serpapi.enabled {
             v.push("serpapi");
         }
+        if self.backends.google.enabled {
+            v.push("google");
+        }
+        if self.backends.bing.enabled {
+            v.push("bing");
+        }
+        if self.backends.http.enabled {
+            v.push("http");
+        }
         v
     }
 
@@ -237,6 +303,7 @@ impl TestConfig {
                 max_total_results: self.server.max_total_results,
                 max_query_budget: self.server.max_query_budget,
                 search_timeout: self.server.search_timeout,
+                language: self.server.language.clone(),
                 ..ServerConfig::default()
             },
             backends: BackendsConfig {
@@ -264,9 +331,18 @@ impl TestConfig {
                     hl: self.backends.serpapi.hl.clone(),
                     safe: self.backends.serpapi.safe.clone(),
                 },
-                google: GoogleConfig::default(),
-                bing: BingConfig::default(),
-                http: HttpBackendConfig::default(),
+                google: GoogleConfig {
+                    api_key: self.backends.google.api_key.clone(),
+                    cx: self.backends.google.cx.clone(),
+                },
+                bing: BingConfig {
+                    api_key: self.backends.bing.api_key.clone(),
+                    market: self.backends.bing.market.clone(),
+                },
+                http: HttpBackendConfig {
+                    url: self.backends.http.url.clone(),
+                    ..HttpBackendConfig::default()
+                },
             },
             llm: LlmConfig {
                 enabled: self.llm.enabled,

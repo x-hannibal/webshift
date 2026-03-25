@@ -33,6 +33,7 @@ pub struct TestServerConfig {
     pub max_total_results: usize,
     pub max_query_budget: usize,
     pub search_timeout: u64,
+    pub language: String,
 }
 
 impl Default for TestServerConfig {
@@ -41,6 +42,7 @@ impl Default for TestServerConfig {
             max_total_results: 5,
             max_query_budget: 16_000,
             search_timeout: 10,
+            language: "en".to_string(),
         }
     }
 }
@@ -56,6 +58,9 @@ pub struct TestBackendsConfig {
     pub tavily: TestTavily,
     pub exa: TestExa,
     pub serpapi: TestSerpapi,
+    pub google: TestGoogle,
+    pub bing: TestBing,
+    pub http: TestHttp,
 }
 
 fn default_backend() -> String {
@@ -156,6 +161,44 @@ impl Default for TestSerpapi {
 
 #[derive(Debug, Deserialize)]
 #[serde(default)]
+pub struct TestGoogle {
+    pub enabled: bool,
+    pub api_key: String,
+    pub cx: String,
+}
+impl Default for TestGoogle {
+    fn default() -> Self {
+        Self { enabled: false, api_key: String::new(), cx: String::new() }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct TestBing {
+    pub enabled: bool,
+    pub api_key: String,
+    pub market: String,
+}
+impl Default for TestBing {
+    fn default() -> Self {
+        Self { enabled: false, api_key: String::new(), market: "en-US".into() }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct TestHttp {
+    pub enabled: bool,
+    pub url: String,
+}
+impl Default for TestHttp {
+    fn default() -> Self {
+        Self { enabled: false, url: String::new() }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
 pub struct TestLlmConfig {
     pub enabled: bool,
     pub base_url: String,
@@ -211,6 +254,15 @@ impl TestConfig {
         if self.backends.serpapi.enabled {
             v.push("serpapi");
         }
+        if self.backends.google.enabled {
+            v.push("google");
+        }
+        if self.backends.bing.enabled {
+            v.push("bing");
+        }
+        if self.backends.http.enabled {
+            v.push("http");
+        }
         v
     }
 
@@ -222,6 +274,7 @@ impl TestConfig {
                 max_total_results: self.server.max_total_results,
                 max_query_budget: self.server.max_query_budget,
                 search_timeout: self.server.search_timeout,
+                language: self.server.language.clone(),
                 ..ServerConfig::default()
             },
             backends: BackendsConfig {
@@ -249,9 +302,18 @@ impl TestConfig {
                     hl: self.backends.serpapi.hl.clone(),
                     safe: self.backends.serpapi.safe.clone(),
                 },
-                google: GoogleConfig::default(),
-                bing: BingConfig::default(),
-                http: HttpBackendConfig::default(),
+                google: GoogleConfig {
+                    api_key: self.backends.google.api_key.clone(),
+                    cx: self.backends.google.cx.clone(),
+                },
+                bing: BingConfig {
+                    api_key: self.backends.bing.api_key.clone(),
+                    market: self.backends.bing.market.clone(),
+                },
+                http: HttpBackendConfig {
+                    url: self.backends.http.url.clone(),
+                    ..HttpBackendConfig::default()
+                },
             },
             llm: LlmConfig {
                 enabled: self.llm.enabled,
@@ -289,6 +351,14 @@ fn find_test_toml() -> Option<PathBuf> {
         }
     }
     None
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+fn box_header(title: &str) -> String {
+    let inner = format!("  {title}  ");
+    let w = inner.len();
+    format!("┌{0}┐\n│{1}│\n└{0}┘", "─".repeat(w), inner)
 }
 
 // ── Harness runner ──────────────────────────────────────────────────
@@ -349,114 +419,145 @@ pub async fn run_harness(
     let total_budget = config.server.max_query_budget;
     let total_score: f64 = scores.iter().sum();
 
-    // ====================================================================
-    //  CONSOLIDATED REPORT
-    // ====================================================================
-    println!();
-    println!("webgate harness report");
-    println!("======================");
-    println!();
+    const BAR_WIDTH: usize = 12;
 
-    // ── Config ──────────────────────────────────────────────────────
-    println!("CONFIG");
-    println!("  query:            {query}");
-    println!("  backend:          {backend_name}");
-    println!("  llm:              {llm_label}");
-    println!("  budget:           {total_budget} chars");
-    println!("  max results:      {}", config.server.max_total_results);
-    println!("  per-page limit:   {} chars", config.server.max_result_length);
-    println!("  oversampling:     {}x", config.server.oversampling_factor);
-    println!("  adaptive budget:  {}", config.server.adaptive_budget);
-    println!();
-
-    // ── Pipeline stats ──────────────────────────────────────────────
-    println!("PIPELINE");
-    println!("  time:             {:.2}s", elapsed.as_secs_f64());
-    println!("  queries:          {} {:?}", result.queries.len(), result.queries);
-    println!("  fetched:          {}", result.stats.fetched);
-    println!("  failed:           {}", result.stats.failed);
-    println!("  gap filled:       {}", result.stats.gap_filled);
-    println!("  per-page limit:   {} chars", result.stats.per_page_limit);
-    println!("  total chars:      {}", result.stats.total_chars);
-    let utilization = if total_budget > 0 {
-        (result.stats.total_chars as f64 / total_budget as f64 * 100.0).round() as usize
-    } else {
-        0
-    };
-    println!("  budget usage:     {}%", utilization);
-    println!();
-
-    // ── Sources table ───────────────────────────────────────────────
-    println!(
-        "SOURCES ({})",
-        result.sources.len()
-    );
-    println!(
-        "  {:>3}  {:>8}  {:>6}  {:>6}  {:>5}  {}",
-        "id", "bm25", "chars", "budget", "trunc", "title"
-    );
-    println!("  {}", "-".repeat(70));
-    for (s, &score) in result.sources.iter().zip(scores.iter()) {
-        let budget_alloc = if total_score > 0.0 && config.server.adaptive_budget {
-            format!("{}", (score / total_score * total_budget as f64).round() as usize)
-        } else {
-            format!("{}", result.stats.per_page_limit)
-        };
-        let bar_len = if max_score > 0.0 {
-            (score / max_score * 15.0).round() as usize
-        } else {
-            0
-        };
-        let bar: String = "#".repeat(bar_len);
-        println!(
-            "  [{:>1}]  {:>8.4}  {:>6}  {:>6}  {:>5}  {}",
-            s.id, score, s.content.len(), budget_alloc,
-            if s.truncated { "yes" } else { "no" },
-            s.title
-        );
-        println!(
-            "       {bar:<15}  {}",
-            s.url
-        );
-    }
-    println!();
-
-    // ── Snippet pool ────────────────────────────────────────────────
+    // ── Snippet pool (first, before full previews) ───────────────────
     if !result.snippet_pool.is_empty() {
-        println!("SNIPPET POOL ({})", result.snippet_pool.len());
+        println!();
+        println!("{}", box_header(&format!("SNIPPET POOL ({})", result.snippet_pool.len())));
+        println!();
         for sp in &result.snippet_pool {
             let preview: String = sp.snippet.chars().take(80).collect();
-            println!("  [{:>2}] {}  --  {preview}", sp.id, sp.title);
+            println!("[{:>2}] {}  --  {preview}", sp.id, sp.title);
         }
-        println!();
+    }
+
+    // ── Content previews ────────────────────────────────────────────
+    let preview_chars = if verbose { 600 } else { 300 };
+    println!();
+    println!("{}", box_header(&format!("CONTENT PREVIEWS ({})", result.sources.len())));
+    println!();
+    for (i, s) in result.sources.iter().enumerate() {
+        let preview: String = s.content.chars().take(preview_chars).collect();
+        println!("[{}] {}", s.id, s.url);
+        println!("TITLE  : {}", s.title);
+        println!("PREVIEW: {preview}");
+        if i + 1 < result.sources.len() {
+            println!();
+        }
     }
 
     // ── LLM summary ─────────────────────────────────────────────────
     if let Some(ref summary) = result.summary {
         let word_count = summary.split_whitespace().count();
-        println!("LLM SUMMARY ({} chars, ~{} words)", summary.len(), word_count);
-        // Indent summary lines for readability
-        for line in summary.lines() {
-            println!("  {line}");
-        }
         println!();
+        println!("{}", box_header(&format!("LLM SUMMARY ({} chars, ~{} words)", summary.len(), word_count)));
+        println!();
+        for line in summary.lines() {
+            println!("{line}");
+        }
     }
     if let Some(ref err) = result.llm_summary_error {
-        println!("LLM SUMMARY ERROR");
-        println!("  {err}");
         println!();
+        println!("{}", box_header("LLM SUMMARY ERROR"));
+        println!();
+        println!("{err}");
     }
 
-    // ── Content previews (verbose only) ─────────────────────────────
-    if verbose {
-        println!("CONTENT PREVIEWS");
-        for s in &result.sources {
-            let preview: String = s.content.chars().take(300).collect();
-            println!("  [{}] {}", s.id, s.title);
-            println!("  {preview}");
-            println!();
-        }
+    // ====================================================================
+    //  CONSOLIDATED REPORT  (at the bottom for easy reading)
+    // ====================================================================
+    println!();
+    println!("{}", box_header("WEBGATE HARNESS REPORT"));
+    println!();
+
+    // ── Config ──────────────────────────────────────────────────────
+    println!("{}", box_header("CONFIG"));
+    println!();
+    println!("query:            {query}");
+    println!("backend:          {backend_name}");
+    println!("language:         {}", config.server.language);
+    println!("llm:              {llm_label}");
+    println!("budget:           {total_budget} chars");
+    println!("max results:      {}", config.server.max_total_results);
+    println!("per-page limit:   {} chars", config.server.max_result_length);
+    println!("oversampling:     {}x", config.server.oversampling_factor);
+    println!("adaptive budget:  {}", config.server.adaptive_budget);
+    println!();
+
+    // ── Pipeline stats ──────────────────────────────────────────────
+    println!("{}", box_header("PIPELINE"));
+    println!();
+    println!("time:             {:.2}s", elapsed.as_secs_f64());
+    println!("queries:          {} {:?}", result.queries.len(), result.queries);
+    println!("fetched:          {}", result.stats.fetched);
+    println!("failed:           {}", result.stats.failed);
+    println!("gap filled:       {}", result.stats.gap_filled);
+    println!("per-page limit:   {} chars", result.stats.per_page_limit);
+    println!("total chars:      {}", result.stats.total_chars);
+    let utilization = if total_budget > 0 {
+        (result.stats.total_chars as f64 / total_budget as f64 * 100.0).round() as usize
+    } else {
+        0
+    };
+    println!("budget usage:     {}%", utilization);
+    println!();
+
+    // ── Compression chain ───────────────────────────────────────────
+    println!("{}", box_header("COMPRESSION"));
+    println!();
+    let raw_kb = result.stats.raw_bytes as f64 / 1024.0;
+    let clean_kb = result.stats.total_chars as f64 / 1024.0;
+    let raw_to_clean_pct = if result.stats.raw_bytes > 0 {
+        (1.0 - result.stats.total_chars as f64 / result.stats.raw_bytes as f64) * 100.0
+    } else {
+        0.0
+    };
+    println!("raw download:     {raw_kb:.1} KB");
+    println!("clean text:       {clean_kb:.1} KB  ({raw_to_clean_pct:.0}% reduction)");
+    if let Some(ref summary) = result.summary {
+        let summary_kb = summary.len() as f64 / 1024.0;
+        let raw_to_summary_pct = if result.stats.raw_bytes > 0 {
+            (1.0 - summary.len() as f64 / result.stats.raw_bytes as f64) * 100.0
+        } else {
+            0.0
+        };
+        println!("llm summary:      {summary_kb:.1} KB  ({raw_to_summary_pct:.0}% reduction)");
     }
+    println!();
+
+    // ── Sources table (one row per record) ──────────────────────────
+    println!("{}", box_header(&format!("SOURCES ({})", result.sources.len())));
+    println!();
+    println!(
+        "{:>3}  {:<6}  {:<bar_w$}  {:>6}  {:>6}  {:>5}",
+        "id", "score", "bm25", "chars", "budget", "trunc",
+        bar_w = BAR_WIDTH,
+    );
+    println!("{}", "─".repeat(46));
+    for (s, &score) in result.sources.iter().zip(scores.iter()) {
+        let budget_alloc = if total_score > 0.0 && config.server.adaptive_budget {
+            (score / total_score * total_budget as f64).round() as usize
+        } else {
+            result.stats.per_page_limit
+        };
+        let filled = if max_score > 0.0 {
+            (score / max_score * BAR_WIDTH as f64).round() as usize
+        } else {
+            0
+        };
+        let bar: String = format!(
+            "{}{}",
+            "█".repeat(filled),
+            "░".repeat(BAR_WIDTH - filled),
+        );
+        println!(
+            "[{:>1}]  {:>6.4}  {bar}  {:>6}  {:>6}  {:>5}",
+            s.id, score, s.content.len(), budget_alloc,
+            if s.truncated { "yes" } else { "no" },
+        );
+    }
+    println!();
 
     Ok(())
 }

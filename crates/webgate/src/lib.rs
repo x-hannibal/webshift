@@ -89,6 +89,8 @@ pub struct Stats {
     pub total_chars: usize,
     pub per_page_limit: usize,
     pub num_results_per_query: usize,
+    /// Total raw HTML bytes downloaded before cleaning.
+    pub raw_bytes: usize,
 }
 
 /// Result of a full search query pipeline.
@@ -273,10 +275,16 @@ pub async fn query_with_options(
     // Oversample per query for signal density after cross-query dedup
     let oversample_count = nrpq * cfg.oversampling_factor as usize;
 
+    // Resolve language: explicit param wins, then config, then none
+    let resolved_lang: Option<&str> = lang.or_else(|| {
+        let l = cfg.language.as_str();
+        if l.is_empty() { None } else { Some(l) }
+    });
+
     // Parallel search across all queries
     let search_futures: Vec<_> = queries_list
         .iter()
-        .map(|q| backend.search(q, oversample_count, lang))
+        .map(|q| backend.search(q, oversample_count, resolved_lang))
         .collect();
 
     let results_per_query = futures::future::join_all(search_futures).await;
@@ -325,7 +333,7 @@ pub async fn query_with_options(
     // Round 1: parallel fetch
     let candidate_urls: Vec<String> = candidates.iter().map(|r| r.url.clone()).collect();
     let max_bytes = cfg.max_download_bytes();
-    let (mut html_map, mut _fetch_timing) =
+    let (mut html_map, mut fetch_timing) =
         scraper::fetcher::fetch_urls(&candidate_urls, max_bytes, cfg.search_timeout).await;
 
     // Round 2: gap filler (replace failed fetches from reserve pool)
@@ -343,10 +351,11 @@ pub async fn query_with_options(
             let backups: Vec<BackendResult> = reserve_pool.drain(..gap_size).collect();
 
             let backup_urls: Vec<String> = backups.iter().map(|r| r.url.clone()).collect();
-            let (backup_html, _backup_timing) =
+            let (backup_html, backup_timing) =
                 scraper::fetcher::fetch_urls(&backup_urls, max_bytes, cfg.search_timeout).await;
 
             html_map.extend(backup_html);
+            fetch_timing.extend(backup_timing);
 
             // Rebuild candidates: keep successful, add backups
             let mut new_candidates: Vec<BackendResult> = final_candidates
@@ -488,6 +497,7 @@ pub async fn query_with_options(
         .collect();
 
     let total_chars: usize = sources.iter().map(|s| s.content.len()).sum();
+    let raw_bytes: usize = fetch_timing.values().map(|(_, b)| b).sum();
 
     // LLM summarization
     #[cfg(feature = "llm")]
@@ -522,6 +532,7 @@ pub async fn query_with_options(
             total_chars,
             per_page_limit,
             num_results_per_query: nrpq,
+            raw_bytes,
         },
         summary,
         llm_summary_error,

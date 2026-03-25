@@ -235,6 +235,11 @@ All opt-in — disabled by default, no data leaves your machine unless enabled.
 | **Summarization** | Markdown report with inline `[1]` `[2]` citations |
 | **LLM reranking** | Tier-2 reranking on top of deterministic BM25 |
 
+> **Cross-language normalization (bonus):** when BM25 reranking surfaces pages in
+> foreign languages (e.g. Chinese, Japanese, Arabic), the LLM summarizer still
+> produces the final report in the prompt language. The agent receives clean,
+> readable output regardless of the language mix in the source pages.
+
 Works with any OpenAI-compatible API (OpenAI, Ollama, vLLM, LM Studio, etc.):
 
 ```toml
