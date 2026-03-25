@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.3] - 2026-03-26
+
+### Added
+
+- Dedicated README.md for `webshift-mcp` crate focused on MCP server installation, configuration, and backends
+- `webshift-mcp` Cargo.toml now points to its own README instead of the root library README
+
+### Changed
+
+- Status badge updated from Alpha to Beta (CI green, ~200 tests, published on crates.io, used daily)
+- Release workflow: install `cross` via `taiki-e/install-action@cross` (pre-built binary) instead of compiling from git source, fixing `aarch64-unknown-linux-gnu` build failures
+
+---
+
 ## [0.2.2] - 2026-03-26
 
 ### Fixed

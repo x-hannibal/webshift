@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.2-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.2)
-[![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/annibale-x/webshift/issues)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.3-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.3)
+[![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/annibale-x/webshift/issues)
 
 ---
 
@@ -351,9 +351,9 @@ for source in &results.sources {
 <!-- RECENT_CHANGES_START -->
 <!-- RECENT_CHANGES_END -->
 
-## Alpha Status
+## Beta Status
 
-WebShift is in **alpha**. Core functionality is stable and the server is used daily,
+WebShift is in **beta**. Core functionality is stable and the server is used daily,
 but the API surface may still change before 1.0.
 
 **Feedback is very welcome.** If something doesn't work as expected, behaves oddly,

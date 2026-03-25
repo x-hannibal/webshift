@@ -6,7 +6,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Denoised web search MCP server — native binary, zero runtime dependencies."
-readme = "../../README.md"
+readme = "README.md"
 keywords = ["mcp-server", "web-search", "html-to-text", "llm", "ai-agents"]
 categories = ["command-line-utilities", "web-programming"]
 
