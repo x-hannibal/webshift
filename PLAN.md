@@ -541,11 +541,11 @@ pub struct QueryResult {
 
 ### M2 — MCP server with fetch tool (3 days)
 
-- [ ] `main.rs` — MCP server with `webgate_fetch` tool via `rmcp`
-- [ ] `webgate_onboarding` tool (static JSON)
-- [ ] CLI argument parsing with clap
-- [ ] Stdio transport working with Claude Code
-- [ ] **Deliverable:** `cargo install webgate-mcp` provides working `mcp-webgate` binary with fetch
+- [x] `main.rs` — MCP server with `webgate_fetch` tool via `rmcp`
+- [x] `webgate_onboarding` tool (static JSON)
+- [x] CLI argument parsing with clap
+- [x] Stdio transport working with Claude Code
+- [x] **Deliverable:** `cargo install webgate-mcp` provides working `mcp-webgate` binary with fetch
 
 ### M3 — Search backends + query pipeline (1 week)
 
