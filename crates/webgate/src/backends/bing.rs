@@ -7,9 +7,11 @@
 use super::{SearchBackend, SearchResult};
 use crate::config::BingConfig;
 
+#[derive(Debug)]
 pub struct BingBackend {
     api_key: String,
     market: String,
+    base_url: String,
     client: reqwest::Client,
 }
 
@@ -23,11 +25,20 @@ impl BingBackend {
         Ok(Self {
             api_key: config.api_key.clone(),
             market: config.market.clone(),
+            base_url: "https://api.bing.microsoft.com".to_string(),
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
                 .expect("failed to build HTTP client"),
         })
+    }
+}
+
+#[cfg(test)]
+impl BingBackend {
+    fn with_base_url(mut self, url: String) -> Self {
+        self.base_url = url;
+        self
     }
 }
 
@@ -59,9 +70,10 @@ impl SearchBackend for BingBackend {
             ("safeSearch", "Moderate".to_string()),
         ];
 
+        let url = format!("{}/v7.0/search", self.base_url);
         let resp = self
             .client
-            .get("https://api.bing.microsoft.com/v7.0/search")
+            .get(&url)
             .header("Ocp-Apim-Subscription-Key", &self.api_key)
             .query(&params)
             .send()
@@ -100,5 +112,167 @@ impl SearchBackend for BingBackend {
         }
 
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    fn test_config(api_key: &str) -> BingConfig {
+        BingConfig {
+            api_key: api_key.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn bing_new_empty_api_key_returns_error() {
+        let result = BingBackend::new(&test_config(""));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("WEBGATE_BING_API_KEY"));
+    }
+
+    #[tokio::test]
+    async fn bing_search_parses_results() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "webPages": {
+                "value": [
+                    {"name": "Rust Lang", "url": "https://rust-lang.org", "snippet": "Systems programming"},
+                    {"name": "Tokio", "url": "https://tokio.rs", "snippet": "Async runtime for Rust"},
+                    {"name": "Serde", "url": "https://serde.rs", "snippet": "Serialization framework"},
+                ]
+            }
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .and(query_param("q", "rust"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let results = backend.search("rust", 2, None).await.unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].title, "Rust Lang");
+        assert_eq!(results[0].url, "https://rust-lang.org");
+        assert_eq!(results[0].snippet, "Systems programming");
+        assert_eq!(results[1].title, "Tokio");
+    }
+
+    #[tokio::test]
+    async fn bing_search_caps_at_50_results() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .and(query_param("count", "50"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"webPages": {"value": []}})))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let results = backend.search("rust", 100, None).await.unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bing_search_missing_webpages_key() {
+        let mock_server = MockServer::start().await;
+
+        // Response has no "webPages" key at all
+        let body = serde_json::json!({"_type": "SearchResponse"});
+
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let results = backend.search("noresults", 5, None).await.unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bing_search_empty_results() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({"webPages": {"value": []}});
+
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let results = backend.search("noresults", 5, None).await.unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bing_search_http_error() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .respond_with(ResponseTemplate::new(401))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let result = backend.search("test", 5, None).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("401"));
+    }
+
+    #[tokio::test]
+    async fn bing_search_with_lang_param() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "webPages": {
+                "value": [
+                    {"name": "Rust IT", "url": "https://rust-lang.org/it", "snippet": "Linguaggio di sistema"},
+                ]
+            }
+        });
+
+        // lang "it" should produce market "it-IT"
+        Mock::given(method("GET"))
+            .and(path("/v7.0/search"))
+            .and(query_param("mkt", "it-IT"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = BingBackend::new(&test_config("test-key"))
+            .unwrap()
+            .with_base_url(mock_server.uri());
+        let results = backend.search("rust", 10, Some("it")).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Rust IT");
     }
 }

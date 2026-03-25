@@ -268,6 +268,40 @@ fn cmd_unpromote() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn increment_patch_basic() {
+        assert_eq!(increment_patch("0.1.9").unwrap(), "0.1.10");
+    }
+
+    #[test]
+    fn increment_patch_from_zero() {
+        assert_eq!(increment_patch("1.0.0").unwrap(), "1.0.1");
+    }
+
+    #[test]
+    fn increment_patch_invalid_format() {
+        assert!(increment_patch("1.2").is_err());
+    }
+
+    #[test]
+    fn increment_patch_non_numeric() {
+        assert!(increment_patch("1.2.abc").is_err());
+    }
+
+    #[test]
+    fn increment_patch_large_number() {
+        assert_eq!(increment_patch("0.1.99").unwrap(), "0.1.100");
+    }
+}
+
 fn cmd_publish() -> Result<(), Box<dyn std::error::Error>> {
     let version = read_workspace_version()?;
     println!("publish: releasing webgate + webgate-mcp v{version} to crates.io");

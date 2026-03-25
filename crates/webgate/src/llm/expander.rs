@@ -126,6 +126,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn expand_queries_non_array_json_fallback() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "choices": [{"message": {"content": "\"not an array\""}}]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let client = make_client(&format!("{}/v1", mock_server.uri()));
+        let result = expand_queries("test query", 3, &client).await;
+
+        // Should fall back to original query only
+        assert_eq!(result, vec!["test query"]);
+    }
+
+    #[tokio::test]
+    async fn expand_queries_respects_n_cap() {
+        let mock_server = MockServer::start().await;
+
+        // LLM returns 10 variants, but n=3 means original + 2 variants max
+        let variants: Vec<String> = (1..=10).map(|i| format!("variant {i}")).collect();
+        let body = serde_json::json!({
+            "choices": [{"message": {"content": serde_json::to_string(&variants).unwrap()}}]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let client = make_client(&format!("{}/v1", mock_server.uri()));
+        let result = expand_queries("original", 3, &client).await;
+
+        assert_eq!(result.len(), 3, "should be original + 2 variants");
+        assert_eq!(result[0], "original");
+        assert_eq!(result[1], "variant 1");
+        assert_eq!(result[2], "variant 2");
+    }
+
+    #[tokio::test]
     async fn expand_queries_strips_markdown_fences() {
         let mock_server = MockServer::start().await;
 

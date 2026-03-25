@@ -117,6 +117,67 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn summarize_empty_sources() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "choices": [{"message": {"content": "No results found."}}]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let client = make_client(&format!("{}/v1", mock_server.uri()));
+        let sources: Vec<Source> = vec![];
+        let result = summarize_results(
+            &["test".to_string()],
+            &sources,
+            &client,
+            500,
+        )
+        .await;
+
+        // Should not panic, should make LLM call and return ok
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn summarize_includes_max_words_in_prompt() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "choices": [{"message": {"content": "Summary text."}}]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let client = make_client(&format!("{}/v1", mock_server.uri()));
+        let sources = vec![make_source(1, "Test", "https://test.com", "content")];
+        summarize_results(
+            &["test".to_string()],
+            &sources,
+            &client,
+            500,
+        )
+        .await
+        .unwrap();
+
+        let requests = mock_server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 1);
+        let body_str = String::from_utf8_lossy(&requests[0].body);
+        assert!(body_str.contains("500"), "prompt should include max_words value '500'");
+    }
+
+    #[tokio::test]
     async fn summarize_propagates_llm_error() {
         let mock_server = MockServer::start().await;
 

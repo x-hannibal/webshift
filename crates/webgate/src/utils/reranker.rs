@@ -392,6 +392,57 @@ mod tests {
     }
 
     #[test]
+    fn tokenize_empty_string() {
+        let tokens = tokenize("");
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn tokenize_only_punctuation() {
+        let tokens = tokenize("!!!");
+        assert!(tokens.is_empty());
+    }
+
+    #[test]
+    fn rerank_deterministic_empty_sources() {
+        let queries = vec!["test".to_string()];
+        let sources: Vec<Source> = vec![];
+        let reranked = rerank_deterministic(&queries, &sources);
+        assert!(reranked.is_empty());
+    }
+
+    #[test]
+    fn rerank_with_scores_empty_sources() {
+        let queries = vec!["test".to_string()];
+        let sources: Vec<Source> = vec![];
+        let (scores, reranked) = rerank_with_scores(&queries, &sources);
+        assert!(scores.is_empty());
+        assert!(reranked.is_empty());
+    }
+
+    #[test]
+    fn redistribute_budget_no_surplus() {
+        // All sources fully consumed (actual == alloc) → no change
+        let sources = vec![
+            make_source(1, "A", &"a".repeat(500)),
+            make_source(2, "B", &"b".repeat(500)),
+        ];
+        let allocs = vec![500, 500];
+        let bm25 = vec![1.0, 1.0];
+        let new_allocs = redistribute_budget(&sources, &allocs, &bm25);
+        assert_eq!(new_allocs, vec![500, 500]);
+    }
+
+    #[test]
+    fn redistribute_budget_empty_inputs() {
+        let sources: Vec<Source> = vec![];
+        let allocs: Vec<usize> = vec![];
+        let bm25: Vec<f64> = vec![];
+        let new_allocs = redistribute_budget(&sources, &allocs, &bm25);
+        assert!(new_allocs.is_empty());
+    }
+
+    #[test]
     fn redistribute_budget_reclaims_surplus() {
         let sources = vec![
             make_source(1, "Short", "ab"),    // actual 2, alloc 1000

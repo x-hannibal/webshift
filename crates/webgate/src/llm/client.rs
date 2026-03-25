@@ -190,6 +190,79 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn chat_no_choices_returns_error() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({"id": "x", "choices": []});
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let config = make_config(&format!("{}/v1", mock_server.uri()));
+        let client = LlmClient::new(&config);
+        let result = client
+            .chat(&[ChatMessage::user("hello")], 0.0)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("no choices"));
+    }
+
+    #[tokio::test]
+    async fn chat_invalid_json_returns_error() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("not json"))
+            .mount(&mock_server)
+            .await;
+
+        let config = make_config(&format!("{}/v1", mock_server.uri()));
+        let client = LlmClient::new(&config);
+        let result = client
+            .chat(&[ChatMessage::user("hello")], 0.0)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("parse error"));
+    }
+
+    #[tokio::test]
+    async fn chat_no_auth_header_when_key_empty() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "choices": [{"message": {"content": "ok"}}]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let config = make_config(&format!("{}/v1", mock_server.uri()));
+        // api_key is already empty from make_config
+        let client = LlmClient::new(&config);
+        client
+            .chat(&[ChatMessage::user("hello")], 0.0)
+            .await
+            .unwrap();
+
+        let requests = mock_server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 1);
+        let auth = requests[0]
+            .headers
+            .get("Authorization");
+        assert!(auth.is_none(), "Authorization header should not be sent when api_key is empty");
+    }
+
+    #[tokio::test]
     async fn chat_sends_api_key_header() {
         let mock_server = MockServer::start().await;
 

@@ -631,4 +631,136 @@ url = "http://my-searxng:9090"
             std::env::remove_var("WEBGATE_LLM_MODEL");
         }
     }
+
+    // --- AdaptiveBudget deserialization ---
+
+    #[test]
+    fn adaptive_budget_deserialize_bool_true() {
+        let toml_str = r#"
+[server]
+adaptive_budget = true
+"#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::On);
+    }
+
+    #[test]
+    fn adaptive_budget_deserialize_bool_false() {
+        let toml_str = r#"
+[server]
+adaptive_budget = false
+"#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::Off);
+    }
+
+    #[test]
+    fn adaptive_budget_deserialize_string_auto() {
+        let toml_str = r#"
+[server]
+adaptive_budget = "auto"
+"#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::Auto);
+    }
+
+    #[test]
+    fn adaptive_budget_deserialize_string_on() {
+        let toml_str = r#"
+[server]
+adaptive_budget = "on"
+"#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::On);
+    }
+
+    #[test]
+    fn adaptive_budget_deserialize_string_off() {
+        let toml_str = r#"
+[server]
+adaptive_budget = "off"
+"#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::Off);
+    }
+
+    #[test]
+    fn adaptive_budget_display() {
+        assert_eq!(AdaptiveBudget::Auto.to_string(), "auto");
+        assert_eq!(AdaptiveBudget::On.to_string(), "on");
+        assert_eq!(AdaptiveBudget::Off.to_string(), "off");
+    }
+
+    // --- Env var override tests ---
+
+    #[test]
+    fn env_override_adaptive_budget() {
+        unsafe {
+            std::env::set_var("WEBGATE_ADAPTIVE_BUDGET", "auto");
+        }
+
+        let mut cfg = Config::default();
+        // Start with a non-Auto value to prove the override works
+        cfg.server.adaptive_budget = AdaptiveBudget::Off;
+        cfg.apply_env();
+
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::Auto);
+
+        unsafe {
+            std::env::remove_var("WEBGATE_ADAPTIVE_BUDGET");
+        }
+    }
+
+    #[test]
+    fn env_override_llm_enabled() {
+        unsafe {
+            std::env::set_var("WEBGATE_LLM_ENABLED", "true");
+        }
+
+        let mut cfg = Config::default();
+        assert!(!cfg.llm.enabled, "default should be false");
+        cfg.apply_env();
+
+        assert!(cfg.llm.enabled, "env override should set llm.enabled to true");
+
+        unsafe {
+            std::env::remove_var("WEBGATE_LLM_ENABLED");
+        }
+    }
+
+    #[test]
+    fn env_bool_accepts_yes_and_1() {
+        // Test "yes"
+        unsafe {
+            std::env::set_var("WEBGATE_DEBUG", "yes");
+        }
+        let mut cfg = Config::default();
+        cfg.apply_env();
+        assert!(cfg.server.debug, "env_bool should accept 'yes'");
+
+        // Test "1"
+        unsafe {
+            std::env::set_var("WEBGATE_DEBUG", "1");
+        }
+        let mut cfg = Config::default();
+        cfg.apply_env();
+        assert!(cfg.server.debug, "env_bool should accept '1'");
+
+        // Test "true"
+        unsafe {
+            std::env::set_var("WEBGATE_DEBUG", "true");
+        }
+        let mut cfg = Config::default();
+        cfg.apply_env();
+        assert!(cfg.server.debug, "env_bool should accept 'true'");
+
+        unsafe {
+            std::env::remove_var("WEBGATE_DEBUG");
+        }
+    }
+
+    #[test]
+    fn default_language_is_en() {
+        assert_eq!(ServerConfig::default().language, "en");
+    }
 }

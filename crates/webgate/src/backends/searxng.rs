@@ -5,6 +5,7 @@
 use super::{SearchBackend, SearchResult};
 use crate::config::SearxngConfig;
 
+#[derive(Debug)]
 pub struct SearxngBackend {
     base_url: String,
     client: reqwest::Client,

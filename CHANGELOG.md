@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.12] - 2026-03-25
+
+### Added
+
+- 95 new tests across all crates, bringing total from 104 to ~200
+- Wiremock-based test suites for all 7 previously untested backends: Brave (8), Tavily (6), Exa (7), SerpAPI (5), Google (7), Bing (7), HTTP (13)
+- Public API tests for `clean()`, `fetch()`, and `query()` in lib.rs (9 tests covering fields, truncation, noise removal, binary/domain filters)
+- Config tests for AdaptiveBudget deserialization (bool/string variants), env_bool helper, language default (10 tests)
+- Edge case tests for reranker (empty inputs, no surplus), LLM client (empty choices, invalid JSON), expander (non-array fallback, n cap), summarizer (empty sources, max_words prompt)
+- Robot unit tests for `increment_patch` helper (5 tests)
+- MCP server tests for StringOrList coercion and empty list deserialization (3 tests)
+- Test map table in CONTRIBUTING.md documenting all ~200 tests by area
+
+### Changed
+
+- All backend structs now derive `Debug` for improved error messages in tests
+- Backend structs (brave, tavily, exa, serpapi, google, bing) now have a `base_url` field to support wiremock testing without modifying production URLs
+- CONTRIBUTING.md feature flags table updated from 5 to 8 backends
+
+---
+
 ## [0.1.11] - 2026-03-25
 
 ### Added

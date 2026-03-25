@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/webgate.svg)](https://crates.io/crates/webgate)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Latest Release](https://img.shields.io/badge/release-v0.1.11-purple.svg)](https://github.com/annibale-x/webgate/releases/tag/v0.1.11)
+[![Latest Release](https://img.shields.io/badge/release-v0.1.12-purple.svg)](https://github.com/annibale-x/webgate/releases/tag/v0.1.12)
 [![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/annibale-x/webgate/issues)
 
 ---

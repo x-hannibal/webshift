@@ -7,8 +7,10 @@
 use super::{SearchBackend, SearchResult};
 use crate::config::ExaConfig;
 
+#[derive(Debug)]
 pub struct ExaBackend {
     config: ExaConfig,
+    base_url: String,
     client: reqwest::Client,
 }
 
@@ -21,6 +23,7 @@ impl ExaBackend {
         }
         Ok(Self {
             config: config.clone(),
+            base_url: "https://api.exa.ai".to_string(),
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
@@ -56,9 +59,10 @@ impl SearchBackend for ExaBackend {
             },
         });
 
+        let url = format!("{}/search", self.base_url);
         let resp = self
             .client
-            .post("https://api.exa.ai/search")
+            .post(&url)
             .header("x-api-key", &self.config.api_key)
             .json(&payload)
             .send()
@@ -103,5 +107,216 @@ impl SearchBackend for ExaBackend {
         }
 
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    /// Helper: create an ExaBackend pointing at the mock server.
+    fn mock_backend(uri: &str) -> ExaBackend {
+        let config = ExaConfig {
+            api_key: "test-key".to_string(),
+            num_sentences: 3,
+            search_type: "neural".to_string(),
+        };
+        let mut backend = ExaBackend::new(&config).unwrap();
+        backend.base_url = uri.to_string();
+        backend
+    }
+
+    #[test]
+    fn exa_new_empty_api_key_returns_error() {
+        let config = ExaConfig {
+            api_key: String::new(),
+            num_sentences: 3,
+            search_type: "neural".to_string(),
+        };
+        let result = ExaBackend::new(&config);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("WEBGATE_EXA_API_KEY"));
+    }
+
+    #[tokio::test]
+    async fn exa_search_parses_results() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "results": [
+                {
+                    "title": "Rust Lang",
+                    "url": "https://rust-lang.org",
+                    "highlights": ["Systems programming language"],
+                    "text": "Full page text here"
+                },
+                {
+                    "title": "Tokio",
+                    "url": "https://tokio.rs",
+                    "highlights": ["Async runtime for Rust"],
+                    "text": "Tokio full text"
+                },
+                {
+                    "title": "Serde",
+                    "url": "https://serde.rs",
+                    "highlights": ["Serialization framework"],
+                    "text": "Serde full text"
+                },
+            ]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        let results = backend.search("rust", 2, None).await.unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].title, "Rust Lang");
+        assert_eq!(results[0].url, "https://rust-lang.org");
+        // Snippet should come from highlights, not text.
+        assert_eq!(results[0].snippet, "Systems programming language");
+        assert_eq!(results[1].title, "Tokio");
+    }
+
+    #[tokio::test]
+    async fn exa_search_empty_results() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({"results": []});
+
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        let results = backend.search("noresults", 5, None).await.unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn exa_search_http_error() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(403))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        let result = backend.search("test", 5, None).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("403"));
+    }
+
+    #[tokio::test]
+    async fn exa_search_with_lang_param() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "results": [
+                {
+                    "title": "Rust",
+                    "url": "https://rust-lang.org",
+                    "highlights": ["Programming"],
+                },
+            ]
+        });
+
+        // Exa ignores the lang parameter — it should still return results.
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        let results = backend.search("rust", 10, Some("it")).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Rust");
+    }
+
+    #[tokio::test]
+    async fn exa_search_num_results_cap() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({"results": []});
+
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        // Request 50 — payload should contain numResults: 10 (capped).
+        let results = backend.search("rust", 50, None).await.unwrap();
+
+        assert!(results.is_empty());
+
+        // Verify the request body contained the cap.
+        let requests = mock_server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 1);
+        let sent: serde_json::Value =
+            serde_json::from_slice(&requests[0].body).unwrap();
+        assert_eq!(sent["numResults"], 10);
+    }
+
+    #[tokio::test]
+    async fn exa_search_highlights_first_then_text_fallback() {
+        let mock_server = MockServer::start().await;
+
+        let body = serde_json::json!({
+            "results": [
+                {
+                    "title": "With Highlights",
+                    "url": "https://example.com/a",
+                    "highlights": ["Highlight snippet"],
+                    "text": "Fallback text"
+                },
+                {
+                    "title": "Without Highlights",
+                    "url": "https://example.com/b",
+                    "highlights": [],
+                    "text": "Text fallback used"
+                },
+                {
+                    "title": "No Highlights Key",
+                    "url": "https://example.com/c",
+                    "text": "Only text available"
+                },
+            ]
+        });
+
+        Mock::given(method("POST"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+            .mount(&mock_server)
+            .await;
+
+        let backend = mock_backend(&mock_server.uri());
+        let results = backend.search("test", 10, None).await.unwrap();
+
+        assert_eq!(results.len(), 3);
+        // First result: highlights present → use highlight.
+        assert_eq!(results[0].snippet, "Highlight snippet");
+        // Second result: empty highlights array → fall back to text.
+        assert_eq!(results[1].snippet, "Text fallback used");
+        // Third result: no highlights key → fall back to text.
+        assert_eq!(results[2].snippet, "Only text available");
     }
 }

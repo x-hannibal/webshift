@@ -1029,3 +1029,173 @@ mod pipeline_tests {
         assert!(result.snippet_pool.len() > 0, "snippet pool should have reserves");
     }
 }
+
+// ---------------------------------------------------------------------------
+// clean() unit tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod clean_tests {
+    use super::*;
+
+    #[test]
+    fn clean_returns_correct_fields() {
+        let result = clean("<html><body><p>hello world</p></body></html>", 8000);
+        assert!(
+            result.text.contains("hello world"),
+            "text should contain 'hello world', got: {}",
+            result.text
+        );
+        assert_eq!(result.char_count, result.text.len());
+        assert!(!result.truncated);
+    }
+
+    #[test]
+    fn clean_truncated_flag() {
+        let result = clean(
+            "<html><body><p>hello world this is long content</p></body></html>",
+            5,
+        );
+        assert!(result.truncated, "should be truncated with max_chars=5");
+        assert!(
+            result.char_count <= 5,
+            "char_count ({}) should be <= 5",
+            result.char_count
+        );
+    }
+
+    #[test]
+    fn clean_empty_html() {
+        let result = clean("", 8000);
+        assert!(
+            result.text.is_empty(),
+            "empty HTML should produce empty text, got: {:?}",
+            result.text
+        );
+        assert_eq!(result.char_count, 0);
+        assert!(!result.truncated);
+    }
+
+    #[test]
+    fn clean_with_noise_elements() {
+        let html = r#"<html><body>
+            <nav>Navigation menu</nav>
+            <script>alert('xss')</script>
+            <p>Real content here</p>
+            <footer>Footer stuff</footer>
+        </body></html>"#;
+        let result = clean(html, 8000);
+        assert!(
+            result.text.contains("Real content here"),
+            "should keep real content"
+        );
+        assert!(
+            !result.text.contains("alert"),
+            "should strip script content"
+        );
+        assert!(
+            !result.text.contains("Navigation menu"),
+            "should strip nav content"
+        );
+        assert!(
+            !result.text.contains("Footer stuff"),
+            "should strip footer content"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// fetch() unit tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod fetch_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn fetch_binary_url_rejected() {
+        let cfg = Config::default();
+        let result = fetch("https://example.com/file.pdf", &cfg).await;
+        assert!(result.is_err(), "binary URL should be rejected");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("binary file URL filtered"),
+            "error should mention binary filter, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_blocked_domain_rejected() {
+        let mut cfg = Config::default();
+        cfg.server.blocked_domains = vec!["blocked.example.com".to_string()];
+        let result = fetch("https://blocked.example.com/page", &cfg).await;
+        assert!(result.is_err(), "blocked domain should be rejected");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("blocked by domain filter"),
+            "error should mention domain filter, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_allowed_domain_not_matching() {
+        let mut cfg = Config::default();
+        cfg.server.allowed_domains = vec!["allowed.example.com".to_string()];
+        let result = fetch("https://other.example.com/page", &cfg).await;
+        assert!(result.is_err(), "non-allowed domain should be rejected");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("blocked by domain filter"),
+            "error should mention domain filter, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_returns_correct_fields() {
+        use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/test-page"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                "<html><head><title>Test Title</title></head>\
+                 <body><p>Test body content for fetching.</p></body></html>",
+            ))
+            .mount(&server)
+            .await;
+
+        let cfg = Config::default();
+        let url = format!("{}/test-page", server.uri());
+        let result = fetch(&url, &cfg).await.unwrap();
+
+        assert_eq!(result.url, url);
+        assert!(
+            result.text.contains("Test body content"),
+            "text should contain page body"
+        );
+        assert_eq!(result.char_count, result.text.len());
+        assert!(
+            result.title.contains("Test Title"),
+            "title should be extracted"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// query_with_options() edge-case tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+#[cfg(feature = "backends")]
+mod query_edge_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn query_empty_queries_returns_error() {
+        let cfg = Config::default();
+        let result = query_with_options(&[], &cfg, None, None, None).await;
+        assert!(result.is_err(), "empty queries should return an error");
+    }
+}

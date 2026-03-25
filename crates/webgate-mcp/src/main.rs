@@ -756,6 +756,26 @@ mod tests {
     }
 
     #[test]
+    fn string_or_list_single_into_vec() {
+        let s = StringOrList::Single("x".into());
+        assert_eq!(s.into_vec(), vec!["x"]);
+    }
+
+    #[test]
+    fn string_or_list_list_into_vec() {
+        let s = StringOrList::List(vec!["a".into(), "b".into()]);
+        assert_eq!(s.into_vec(), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn query_params_empty_list_deserialize() {
+        let json = r#"{"queries": []}"#;
+        let params: QueryParams = serde_json::from_str(json).unwrap();
+        let queries = params.queries.into_vec();
+        assert!(queries.is_empty());
+    }
+
+    #[test]
     fn query_params_with_backend_override() {
         let json = r#"{"queries": "test query", "backend": "brave"}"#;
         let params: QueryParams = serde_json::from_str(json).unwrap();
