@@ -36,6 +36,7 @@ pub struct TestServerConfig {
     pub max_query_budget: usize,
     pub search_timeout: u64,
     pub language: String,
+    pub adaptive_budget: webgate::config::AdaptiveBudget,
 }
 
 impl Default for TestServerConfig {
@@ -45,6 +46,7 @@ impl Default for TestServerConfig {
             max_query_budget: 16_000,
             search_timeout: 10,
             language: "en".to_string(),
+            adaptive_budget: webgate::config::AdaptiveBudget::Auto,
         }
     }
 }
@@ -265,6 +267,7 @@ impl TestConfig {
     }
 
     /// List backend names that are enabled.
+    #[allow(dead_code)]
     pub fn enabled_backends(&self) -> Vec<&str> {
         let mut v = Vec::new();
         if self.backends.searxng.enabled {
@@ -304,6 +307,7 @@ impl TestConfig {
                 max_query_budget: self.server.max_query_budget,
                 search_timeout: self.server.search_timeout,
                 language: self.server.language.clone(),
+                adaptive_budget: self.server.adaptive_budget.clone(),
                 ..ServerConfig::default()
             },
             backends: BackendsConfig {

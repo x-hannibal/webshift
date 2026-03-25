@@ -3,8 +3,63 @@
 //! The library handles TOML loading and env var overrides.
 //! CLI parsing belongs in the binary crate (`webgate-mcp`).
 
-use serde::Deserialize;
+use serde::{de, Deserialize};
+use std::fmt;
 use std::path::{Path, PathBuf};
+
+// ---------------------------------------------------------------------------
+// AdaptiveBudget mode
+// ---------------------------------------------------------------------------
+
+/// Controls proportional budget allocation after BM25 reranking.
+///
+/// - `Off` — flat per-page cap (`max_query_budget / num_sources`), always.
+/// - `On`  — always redistribute budget proportionally to BM25 scores.
+/// - `Auto` (default) — redistribute only when scores are sufficiently spread
+///   (dominance ratio > 1.5, i.e. the top source would receive 50%+ more than flat).
+///
+/// TOML: `adaptive_budget = "auto"` / `"on"` / `"off"` / `true` / `false`
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum AdaptiveBudget {
+    #[default]
+    Auto,
+    On,
+    Off,
+}
+
+impl fmt::Display for AdaptiveBudget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AdaptiveBudget::Auto => write!(f, "auto"),
+            AdaptiveBudget::On => write!(f, "on"),
+            AdaptiveBudget::Off => write!(f, "off"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AdaptiveBudget {
+    fn deserialize<D: de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> de::Visitor<'de> for V {
+            type Value = AdaptiveBudget;
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, r#"bool or "auto" / "on" / "off""#)
+            }
+            fn visit_bool<E: de::Error>(self, v: bool) -> Result<AdaptiveBudget, E> {
+                Ok(if v { AdaptiveBudget::On } else { AdaptiveBudget::Off })
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<AdaptiveBudget, E> {
+                match v.to_lowercase().as_str() {
+                    "auto" => Ok(AdaptiveBudget::Auto),
+                    "on" | "true" | "yes" | "1" => Ok(AdaptiveBudget::On),
+                    "off" | "false" | "no" | "0" => Ok(AdaptiveBudget::Off),
+                    _ => Err(de::Error::invalid_value(de::Unexpected::Str(v), &self)),
+                }
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
 
 /// Top-level configuration.
 #[derive(Debug, Clone, Deserialize)]
@@ -43,7 +98,7 @@ pub struct ServerConfig {
     pub debug: bool,
     pub log_file: String,
     pub trace: bool,
-    pub adaptive_budget: bool,
+    pub adaptive_budget: AdaptiveBudget,
     pub adaptive_budget_fetch_factor: u32,
     /// BCP-47 language tag passed to search backends (e.g. "en", "it", "all").
     /// Empty string = let the backend decide.
@@ -67,7 +122,7 @@ impl Default for ServerConfig {
             debug: false,
             log_file: String::new(),
             trace: false,
-            adaptive_budget: false,
+            adaptive_budget: AdaptiveBudget::Auto,
             adaptive_budget_fetch_factor: 3,
             language: "en".to_string(),
         }
@@ -409,8 +464,12 @@ impl Config {
         if let Some(v) = env_bool("WEBGATE_TRACE") {
             self.server.trace = v;
         }
-        if let Some(v) = env_bool("WEBGATE_ADAPTIVE_BUDGET") {
-            self.server.adaptive_budget = v;
+        if let Some(v) = env_str("WEBGATE_ADAPTIVE_BUDGET") {
+            self.server.adaptive_budget = match v.to_lowercase().as_str() {
+                "auto" => AdaptiveBudget::Auto,
+                "on" | "true" | "yes" | "1" => AdaptiveBudget::On,
+                _ => AdaptiveBudget::Off,
+            };
         }
         if let Some(v) = env_u32("WEBGATE_ADAPTIVE_BUDGET_FETCH_FACTOR") {
             self.server.adaptive_budget_fetch_factor = v;
@@ -512,7 +571,7 @@ mod tests {
         assert_eq!(cfg.server.max_search_queries, 5);
         assert_eq!(cfg.server.results_per_query, 5);
         assert!(!cfg.server.debug);
-        assert!(!cfg.server.adaptive_budget);
+        assert_eq!(cfg.server.adaptive_budget, AdaptiveBudget::Auto);
         assert_eq!(cfg.server.adaptive_budget_fetch_factor, 3);
         assert_eq!(cfg.backends.default, "searxng");
         assert_eq!(cfg.backends.searxng.url, "http://localhost:8080");

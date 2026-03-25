@@ -37,6 +37,8 @@ Question
   └─ Structured JSON output
 ```
 
+For a detailed explanation of each pipeline stage, BM25 parameters, adaptive budget allocation, and real compression metrics see [Under the Hood](docs/UNDER_THE_HOOD.md). For the full configuration reference (TOML, env vars, CLI args) see [Configuration](docs/CONFIGURATION.md). For ready-to-use examples see [Use Cases](docs/USE_CASES.md).
+
 ---
 
 ## Installation
@@ -140,7 +142,7 @@ max_download_mb     = 1       # streaming cap per page (MB)
 search_timeout      = 8       # seconds
 results_per_query   = 5
 oversampling_factor = 2
-adaptive_budget     = false   # [EXPERIMENTAL] proportional allocation
+adaptive_budget     = "auto"  # "auto" | "on" | "off" — budget allocation mode
 
 [backends]
 default = "searxng"
@@ -192,7 +194,9 @@ summarization_enabled = true
 llm_rerank_enabled    = false
 ```
 
-Ready-to-use config examples are in [`examples/`](examples/).
+For every setting with all three config methods (TOML, env vars, CLI args)
+and plain-language descriptions, see the full [Configuration Reference](docs/CONFIGURATION.md).
+Ready-to-use config examples are in [Use Cases](docs/USE_CASES.md) and [`examples/`](examples/).
 
 ### Key environment variables
 

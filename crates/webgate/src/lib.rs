@@ -383,7 +383,7 @@ pub async fn query_with_options(
         .max_result_length
         .min(cfg.max_query_budget / final_candidates.len().max(1));
 
-    let fetch_limit = if cfg.adaptive_budget {
+    let fetch_limit = if cfg.adaptive_budget != config::AdaptiveBudget::Off {
         cfg.max_result_length * cfg.adaptive_budget_fetch_factor as usize
     } else {
         per_page_limit
@@ -438,12 +438,36 @@ pub async fn query_with_options(
     }
 
     // Tier-1 rerank: deterministic BM25
-    if cfg.adaptive_budget {
-        let total_budget = cfg.max_query_budget;
-        let (bm25_scores, reranked) =
-            utils::reranker::rerank_with_scores(&queries_list, &sources);
-        sources = reranked;
+    // Compute scores upfront when adaptive mode is On or Auto.
+    let (bm25_scores_opt, reranked) = match cfg.adaptive_budget {
+        config::AdaptiveBudget::Off => {
+            (None, utils::reranker::rerank_deterministic(&queries_list, &sources))
+        }
+        _ => {
+            let (scores, reranked) =
+                utils::reranker::rerank_with_scores(&queries_list, &sources);
+            (Some(scores), reranked)
+        }
+    };
+    sources = reranked;
 
+    // Resolve Auto → On/Off via dominance ratio:
+    //   dominance_ratio = (max_score / total_score) × N
+    // If > 1.5 the top source would get 50%+ more than flat allocation → enable adaptive.
+    let use_adaptive = match cfg.adaptive_budget {
+        config::AdaptiveBudget::On => true,
+        config::AdaptiveBudget::Off => false,
+        config::AdaptiveBudget::Auto => bm25_scores_opt.as_ref().map_or(false, |scores| {
+            let total: f64 = scores.iter().sum();
+            let max: f64 = scores.iter().cloned().fold(0.0_f64, f64::max);
+            let n = scores.len() as f64;
+            total > 0.0 && (max / total * n) > 1.5
+        }),
+    };
+
+    if use_adaptive {
+        let bm25_scores = bm25_scores_opt.unwrap();
+        let total_budget = cfg.max_query_budget;
         let total_score: f64 = bm25_scores.iter().sum();
         let mut allocs: Vec<usize> = if total_score > 0.0 {
             bm25_scores
@@ -461,15 +485,19 @@ pub async fn query_with_options(
 
         allocs = utils::reranker::redistribute_budget(&sources, &allocs, &bm25_scores);
 
-        // Truncate content to final allocations
         for (source, &alloc) in sources.iter_mut().zip(allocs.iter()) {
             if source.content.len() > alloc {
-                source.content.truncate(alloc);
+                source.content = source.content.chars().take(alloc).collect();
                 source.truncated = true;
             }
         }
     } else {
-        sources = utils::reranker::rerank_deterministic(&queries_list, &sources);
+        for source in &mut sources {
+            if source.content.len() > per_page_limit {
+                source.content = source.content.chars().take(per_page_limit).collect();
+                source.truncated = true;
+            }
+        }
     }
 
     // Tier-2 rerank: LLM-assisted (opt-in)

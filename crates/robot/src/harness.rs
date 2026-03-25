@@ -34,6 +34,7 @@ pub struct TestServerConfig {
     pub max_query_budget: usize,
     pub search_timeout: u64,
     pub language: String,
+    pub adaptive_budget: webgate::config::AdaptiveBudget,
 }
 
 impl Default for TestServerConfig {
@@ -43,6 +44,7 @@ impl Default for TestServerConfig {
             max_query_budget: 16_000,
             search_timeout: 10,
             language: "en".to_string(),
+            adaptive_budget: webgate::config::AdaptiveBudget::Auto,
         }
     }
 }
@@ -275,6 +277,7 @@ impl TestConfig {
                 max_query_budget: self.server.max_query_budget,
                 search_timeout: self.server.search_timeout,
                 language: self.server.language.clone(),
+                adaptive_budget: self.server.adaptive_budget.clone(),
                 ..ServerConfig::default()
             },
             backends: BackendsConfig {
@@ -419,6 +422,24 @@ pub async fn run_harness(
     let total_budget = config.server.max_query_budget;
     let total_score: f64 = scores.iter().sum();
 
+    // ── Resolve adaptive budget display ─────────────────────────────
+    let adaptive_display = {
+        use webgate::config::AdaptiveBudget;
+        match &config.server.adaptive_budget {
+            AdaptiveBudget::On => "on".to_string(),
+            AdaptiveBudget::Off => "off".to_string(),
+            AdaptiveBudget::Auto => {
+                let n = scores.len() as f64;
+                let dominance = if total_score > 0.0 { max_score / total_score * n } else { 1.0 };
+                if dominance > 1.5 {
+                    format!("auto (→ on,  dominance {dominance:.2})")
+                } else {
+                    format!("auto (→ off, dominance {dominance:.2})")
+                }
+            }
+        }
+    };
+
     const BAR_WIDTH: usize = 12;
 
     // ── Snippet pool (first, before full previews) ───────────────────
@@ -482,7 +503,7 @@ pub async fn run_harness(
     println!("max results:      {}", config.server.max_total_results);
     println!("per-page limit:   {} chars", config.server.max_result_length);
     println!("oversampling:     {}x", config.server.oversampling_factor);
-    println!("adaptive budget:  {}", config.server.adaptive_budget);
+    println!("adaptive budget:  {adaptive_display}");
     println!();
 
     // ── Pipeline stats ──────────────────────────────────────────────
@@ -514,7 +535,7 @@ pub async fn run_harness(
         0.0
     };
     println!("raw download:     {raw_kb:.1} KB");
-    println!("clean text:       {clean_kb:.1} KB  ({raw_to_clean_pct:.0}% reduction)");
+    println!("clean text:       {clean_kb:.1} KB  ({raw_to_clean_pct:.1}% reduction)");
     if let Some(ref summary) = result.summary {
         let summary_kb = summary.len() as f64 / 1024.0;
         let raw_to_summary_pct = if result.stats.raw_bytes > 0 {
@@ -522,7 +543,7 @@ pub async fn run_harness(
         } else {
             0.0
         };
-        println!("llm summary:      {summary_kb:.1} KB  ({raw_to_summary_pct:.0}% reduction)");
+        println!("llm summary:      {summary_kb:.1} KB  ({raw_to_summary_pct:.1}% reduction)");
     }
     println!();
 
@@ -536,7 +557,7 @@ pub async fn run_harness(
     );
     println!("{}", "─".repeat(46));
     for (s, &score) in result.sources.iter().zip(scores.iter()) {
-        let budget_alloc = if total_score > 0.0 && config.server.adaptive_budget {
+        let budget_alloc = if total_score > 0.0 && config.server.adaptive_budget != webgate::config::AdaptiveBudget::Off {
             (score / total_score * total_budget as f64).round() as usize
         } else {
             result.stats.per_page_limit
