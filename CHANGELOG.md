@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.2] - 2026-03-26
+
+### Fixed
+
+- All relative links in README.md converted to absolute GitHub URLs for crates.io compatibility
+- Library version in README installation instructions updated from 0.1 to 0.2
+
+---
+
 ## [0.2.1] - 2026-03-25
 
 ### Added

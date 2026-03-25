@@ -1,9 +1,9 @@
 # WebShift
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.1-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.1)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.2-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.2)
 [![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/annibale-x/webshift/issues)
 
 ---
@@ -78,7 +78,7 @@ Question
   +- Structured JSON output
 ```
 
-For a detailed explanation of each pipeline stage, BM25 parameters, adaptive budget allocation, and real compression metrics see [Under the Hood](docs/UNDER_THE_HOOD.md). For the full configuration reference (TOML, env vars, CLI args) see [Configuration](docs/CONFIGURATION.md). For ready-to-use examples see [Use Cases](docs/USE_CASES.md).
+For a detailed explanation of each pipeline stage, BM25 parameters, adaptive budget allocation, and real compression metrics see [Under the Hood](https://github.com/annibale-x/webshift/blob/main/docs/UNDER_THE_HOOD.md). For the full configuration reference (TOML, env vars, CLI args) see [Configuration](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md). For ready-to-use examples see [Use Cases](https://github.com/annibale-x/webshift/blob/main/docs/USE_CASES.md).
 
 ---
 
@@ -102,13 +102,13 @@ cargo install --path crates/webshift-mcp
 
 ```toml
 # Full pipeline (search + fetch + clean + rerank)
-webshift = "0.1"
+webshift = "0.2"
 
 # Cleaner + fetcher only (no search backends)
-webshift = { version = "0.1", default-features = false }
+webshift = { version = "0.2", default-features = false }
 
 # Everything including LLM features
-webshift = { version = "0.1", features = ["llm"] }
+webshift = { version = "0.2", features = ["llm"] }
 ```
 
 ---
@@ -140,7 +140,7 @@ No Docker? Use a cloud backend — see [Search backends](#search-backends).
 
 That's it. The agent now has `webshift_query`, `webshift_fetch`, and `webshift_onboarding`.
 
-For client-specific setup see [docs/integrations/](docs/integrations/).
+For client-specific setup see [docs/integrations/](https://github.com/annibale-x/webshift/tree/main/docs/integrations).
 
 ---
 
@@ -236,8 +236,8 @@ llm_rerank_enabled    = false
 ```
 
 For every setting with all three config methods (TOML, env vars, CLI args)
-and plain-language descriptions, see the full [Configuration Reference](docs/CONFIGURATION.md).
-Ready-to-use config examples are in [Use Cases](docs/USE_CASES.md) and [`examples/`](examples/).
+and plain-language descriptions, see the full [Configuration Reference](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md).
+Ready-to-use config examples are in [Use Cases](https://github.com/annibale-x/webshift/blob/main/docs/USE_CASES.md) and [`examples/`](https://github.com/annibale-x/webshift/tree/main/examples).
 
 ### Key environment variables
 
@@ -343,8 +343,8 @@ for source in &results.sources {
 
 | Platform | Guide |
 |----------|-------|
-| Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code | [IDE Integration](docs/integrations/IDE.md) |
-| Gemini CLI, Claude CLI, custom agents | [Agent Integration](docs/integrations/AGENT.md) |
+| Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code | [IDE Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/IDE.md) |
+| Gemini CLI, Claude CLI, custom agents | [Agent Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/AGENT.md) |
 
 ---
 
@@ -365,7 +365,7 @@ Bug reports, configuration questions, and feature requests all help shape the ro
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
+Contributions are welcome! Please see [CONTRIBUTING.md](https://github.com/annibale-x/webshift/blob/main/CONTRIBUTING.md) for detailed guidelines on:
 - Development setup and workflow
 - Code style and conventions
 - Testing requirements
@@ -374,7 +374,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](https://github.com/annibale-x/webshift/blob/main/LICENSE) for details.
 
 ## Links
 
@@ -385,6 +385,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-**Need help?** Check the [documentation](docs/) or open an [issue](https://github.com/annibale-x/webshift/issues) on GitHub.
+**Need help?** Check the [documentation](https://github.com/annibale-x/webshift/tree/main/docs) or open an [issue](https://github.com/annibale-x/webshift/issues) on GitHub.
 
 <!-- mcp-name: io.github.annibale-x/mcp-webshift -->
