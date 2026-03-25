@@ -577,7 +577,12 @@ pub struct QueryResult {
 - [x] Tests: LLM features with mock responses
 - [x] Integration test infrastructure: `test.toml` config + `#[ignore]` live tests
 - [x] `robot harness` — diagnostic runner with BM25 scores, budget stats, LLM summary
-- [x] **Deliverable:** Full feature parity with Python Phase 4
+- [x] `backends/google.rs` — Google Custom Search API backend (API key + CX)
+- [x] `backends/bing.rs` — Bing Web Search API backend (API key + market)
+- [x] `backends/http.rs` — generic configurable HTTP backend (TOML-only, no code required)
+- [x] Docs: modular structure — `docs/integrations/IDE.md`, `docs/integrations/AGENT.md`
+- [x] CHANGELOG rewritten in Keep a Changelog format
+- [x] **Deliverable:** Full feature parity with Python Phase 4 + 3 new backends
 
 ### M5 — CI, release, publish (3 days)
 

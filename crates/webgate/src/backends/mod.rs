@@ -4,8 +4,11 @@
 //! behind the `SearchBackend` trait. The `create_backend` factory selects one
 //! based on `config.backends.default`.
 
+pub mod bing;
 pub mod brave;
 pub mod exa;
+pub mod google;
+pub mod http;
 pub mod searxng;
 pub mod serpapi;
 pub mod tavily;
@@ -49,6 +52,9 @@ pub fn create_backend_by_name(
         "tavily" => Ok(Box::new(tavily::TavilyBackend::new(&config.tavily)?)),
         "exa" => Ok(Box::new(exa::ExaBackend::new(&config.exa)?)),
         "serpapi" => Ok(Box::new(serpapi::SerpapiBackend::new(&config.serpapi)?)),
+        "google" => Ok(Box::new(google::GoogleBackend::new(&config.google)?)),
+        "bing" => Ok(Box::new(bing::BingBackend::new(&config.bing)?)),
+        "http" => Ok(Box::new(http::HttpBackend::new(&config.http)?)),
         other => Err(crate::WebgateError::Backend(format!(
             "unknown backend: {other}"
         ))),
@@ -92,5 +98,26 @@ mod tests {
         let config = BackendsConfig::default();
         let backend = create_backend_by_name("searxng", &config);
         assert!(backend.is_ok());
+    }
+
+    #[test]
+    fn create_backend_google_needs_api_key() {
+        let mut config = BackendsConfig::default();
+        config.default = "google".to_string();
+        assert!(create_backend(&config).is_err());
+    }
+
+    #[test]
+    fn create_backend_bing_needs_api_key() {
+        let mut config = BackendsConfig::default();
+        config.default = "bing".to_string();
+        assert!(create_backend(&config).is_err());
+    }
+
+    #[test]
+    fn create_backend_http_needs_url() {
+        let mut config = BackendsConfig::default();
+        config.default = "http".to_string();
+        assert!(create_backend(&config).is_err());
     }
 }

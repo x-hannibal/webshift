@@ -264,6 +264,9 @@ impl TestConfig {
                     hl: self.backends.serpapi.hl.clone(),
                     safe: self.backends.serpapi.safe.clone(),
                 },
+                google: GoogleConfig::default(),
+                bing: BingConfig::default(),
+                http: HttpBackendConfig::default(),
             },
             llm: LlmConfig {
                 enabled: self.llm.enabled,

@@ -87,6 +87,9 @@ pub struct BackendsConfig {
     pub tavily: TavilyConfig,
     pub exa: ExaConfig,
     pub serpapi: SerpapiConfig,
+    pub google: GoogleConfig,
+    pub bing: BingConfig,
+    pub http: HttpBackendConfig,
 }
 
 impl Default for BackendsConfig {
@@ -98,6 +101,9 @@ impl Default for BackendsConfig {
             tavily: TavilyConfig::default(),
             exa: ExaConfig::default(),
             serpapi: SerpapiConfig::default(),
+            google: GoogleConfig::default(),
+            bing: BingConfig::default(),
+            http: HttpBackendConfig::default(),
         }
     }
 }
@@ -185,6 +191,93 @@ impl Default for SerpapiConfig {
             gl: "us".to_string(),
             hl: "en".to_string(),
             safe: "off".to_string(),
+        }
+    }
+}
+
+/// Google Custom Search API config.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct GoogleConfig {
+    pub api_key: String,
+    /// Custom Search Engine ID (from programmablesearchengine.google.com).
+    pub cx: String,
+}
+
+impl Default for GoogleConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            cx: String::new(),
+        }
+    }
+}
+
+/// Bing Web Search API config.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct BingConfig {
+    pub api_key: String,
+    /// Market code, e.g. "en-US", "it-IT" (default: "en-US").
+    pub market: String,
+}
+
+impl Default for BingConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            market: "en-US".to_string(),
+        }
+    }
+}
+
+/// Generic configurable HTTP backend.
+///
+/// Point at any REST search API that returns a JSON array of results.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct HttpBackendConfig {
+    /// Base URL of the search endpoint.
+    pub url: String,
+    /// HTTP method: "GET" (default) or "POST".
+    pub method: String,
+    /// Query parameter name for the search string (default: "q").
+    pub query_param: String,
+    /// Query parameter name for the result count (default: "count"; set to ""
+    /// to omit).
+    pub count_param: String,
+    /// Query parameter name for the language filter (default: ""; set to ""
+    /// to omit).
+    pub lang_param: String,
+    /// Dot-separated JSON path to the results array, e.g. "data.items".
+    /// Empty string means the root of the response is the array.
+    pub results_path: String,
+    /// Field name for the result title (default: "title").
+    pub title_field: String,
+    /// Field name for the result URL (default: "url").
+    pub url_field: String,
+    /// Field name for the result snippet (default: "snippet").
+    pub snippet_field: String,
+    /// Additional static HTTP headers (e.g. Authorization).
+    pub headers: std::collections::HashMap<String, String>,
+    /// Additional static query parameters appended to every request.
+    pub extra_params: std::collections::HashMap<String, String>,
+}
+
+impl Default for HttpBackendConfig {
+    fn default() -> Self {
+        Self {
+            url: String::new(),
+            method: "GET".to_string(),
+            query_param: "q".to_string(),
+            count_param: "count".to_string(),
+            lang_param: String::new(),
+            results_path: String::new(),
+            title_field: "title".to_string(),
+            url_field: "url".to_string(),
+            snippet_field: "snippet".to_string(),
+            headers: std::collections::HashMap::new(),
+            extra_params: std::collections::HashMap::new(),
         }
     }
 }

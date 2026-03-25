@@ -33,9 +33,27 @@ struct Cli {
     #[arg(long)]
     config: Option<PathBuf>,
 
-    /// Override default search backend (searxng, brave, tavily, exa, serpapi).
+    /// Override default search backend (searxng, brave, tavily, exa, serpapi, google, bing, http).
     #[arg(long)]
     default_backend: Option<String>,
+
+    // --- Google Custom Search ---
+    /// Google Custom Search API key (WEBGATE_GOOGLE_API_KEY).
+    #[arg(long)]
+    google_api_key: Option<String>,
+
+    /// Google Custom Search Engine ID (WEBGATE_GOOGLE_CX).
+    #[arg(long)]
+    google_cx: Option<String>,
+
+    // --- Bing Web Search ---
+    /// Bing Web Search API key (WEBGATE_BING_API_KEY).
+    #[arg(long)]
+    bing_api_key: Option<String>,
+
+    /// Bing market code, e.g. "en-US" (WEBGATE_BING_MARKET).
+    #[arg(long)]
+    bing_market: Option<String>,
 
     /// Enable debug logging.
     #[arg(long)]
@@ -121,7 +139,7 @@ struct QueryParams {
     #[serde(default)]
     lang: Option<String>,
 
-    /// Search engine: searxng | brave | tavily | exa | serpapi (default: server config).
+    /// Search engine: searxng | brave | tavily | exa | serpapi | google | bing | http (default: server config).
     #[serde(default)]
     backend: Option<String>,
 }
@@ -201,7 +219,7 @@ impl WebgateServer {
                             cfg.server.max_total_results,
                         ),
                         "lang": "Language code for results, e.g. 'en', 'it', 'de' (optional).",
-                        "backend": "Search engine: searxng | brave | tavily | exa | serpapi (default: server config).",
+                        "backend": "Search engine: searxng | brave | tavily | exa | serpapi | google | bing | http (default: server config).",
                     },
                     "output_fields": {
                         "sources": "Fetched and cleaned pages. Each has: id, title, url, snippet, content, truncated.",
@@ -377,6 +395,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Some(ref log_file) = cli.log_file {
         config.server.log_file = log_file.clone();
+    }
+
+    // Apply Google CLI overrides
+    if let Some(ref v) = cli.google_api_key {
+        config.backends.google.api_key = v.clone();
+    }
+    if let Some(ref v) = cli.google_cx {
+        config.backends.google.cx = v.clone();
+    }
+    // Apply Bing CLI overrides
+    if let Some(ref v) = cli.bing_api_key {
+        config.backends.bing.api_key = v.clone();
+    }
+    if let Some(ref v) = cli.bing_market {
+        config.backends.bing.market = v.clone();
     }
 
     // Apply LLM CLI overrides

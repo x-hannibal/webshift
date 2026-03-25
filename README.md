@@ -1,9 +1,12 @@
 # webgate
 
+[![Crates.io](https://img.shields.io/crates/v/webgate-mcp.svg)](https://crates.io/crates/webgate-mcp)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
+
 **Denoised web search library and MCP server** — native Rust port of [mcp-webgate](https://github.com/annibale-x/mcp-webgate).
 
-Single static binary, zero runtime dependencies. Feeds clean, right-sized web
-content to LLM agents without flooding the context window.
+Single static binary, zero runtime dependencies. Feeds clean, right-sized web content to LLM agents without flooding the context window.
 
 ---
 
@@ -14,7 +17,7 @@ Question
   │
   ├─ (optional) LLM query expansion → multiple search variants
   │
-  ├─ Search via backend (SearXNG, Brave, Tavily, Exa, SerpAPI)
+  ├─ Search via backend (SearXNG, Brave, Tavily, Exa, SerpAPI, Google, Bing, HTTP)
   │
   ├─ Deduplicate + filter binary URLs
   │
@@ -38,19 +41,19 @@ Question
 
 ## Installation
 
-### From source (recommended during development)
-
-```bash
-cargo install --path crates/webgate-mcp
-```
-
-### From crates.io (when published)
+### Binary (MCP server)
 
 ```bash
 cargo install webgate-mcp
 ```
 
 The binary is called `mcp-webgate`.
+
+### From source
+
+```bash
+cargo install --path crates/webgate-mcp
+```
 
 ### As a library
 
@@ -71,16 +74,15 @@ webgate = { version = "0.1", features = ["llm"] }
 
 ### 1. Set up a search backend
 
-The easiest option is [SearXNG](https://docs.searxng.org/) — free, self-hosted,
-no API key:
+The easiest option is [SearXNG](https://docs.searxng.org/) — free, self-hosted, no API key:
 
 ```bash
 docker run -d -p 4000:8080 searxng/searxng
 ```
 
-### 2. Configure the MCP client
+No Docker? Use a cloud backend — see [Search backends](#search-backends).
 
-Add to your MCP client config (e.g. Claude Desktop, Claude Code, Cursor):
+### 2. Configure your MCP client
 
 ```json
 {
@@ -93,8 +95,9 @@ Add to your MCP client config (e.g. Claude Desktop, Claude Code, Cursor):
 }
 ```
 
-That's it. The agent now has access to `webgate_query`, `webgate_fetch`, and
-`webgate_onboarding` tools.
+That's it. The agent now has `webgate_query`, `webgate_fetch`, and `webgate_onboarding`.
+
+For client-specific setup see [docs/integrations/](docs/integrations/).
 
 ---
 
@@ -115,59 +118,6 @@ That's it. The agent now has access to `webgate_query`, `webgate_fetch`, and
 | `lang` | string | none | Language filter (e.g. `"en"`) |
 | `backend` | string | config default | Override search backend |
 
-### `webgate_fetch` parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | string | required | URL to fetch |
-| `max_chars` | integer | 8000 | Maximum characters in output |
-
----
-
-## Client integrations
-
-### Claude Desktop
-
-```json
-{
-  "mcpServers": {
-    "webgate": {
-      "command": "mcp-webgate",
-      "args": ["--default-backend", "searxng"]
-    }
-  }
-}
-```
-
-### Claude Code
-
-```bash
-claude mcp add webgate -- mcp-webgate --default-backend searxng
-```
-
-### Cursor / Windsurf / VS Code
-
-Add to MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "webgate": {
-      "command": "mcp-webgate",
-      "args": ["--default-backend", "searxng"]
-    }
-  }
-}
-```
-
-### With a config file
-
-```bash
-mcp-webgate --config /path/to/webgate.toml
-```
-
-See [`examples/webgate.toml`](examples/webgate.toml) for a full configuration example.
-
 ---
 
 ## Configuration
@@ -176,30 +126,83 @@ Resolution order (highest priority first):
 
 1. **CLI args** — `--default-backend`, `--debug`, etc.
 2. **Environment variables** — `WEBGATE_*` prefix
-3. **Config file** — `webgate.toml`
+3. **Config file** — `webgate.toml` (current dir, then `~/webgate.toml`)
 4. **Built-in defaults**
 
-### Key settings
+### Config file
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `max_query_budget` | 32,000 chars | Total character budget across all sources |
-| `max_result_length` | 8,000 chars | Per-page character cap |
-| `max_total_results` | 20 | Hard cap on results per call |
-| `max_download_mb` | 1 MB | Streaming download cap per page |
-| `search_timeout` | 8s | Timeout for search + fetch |
-| `results_per_query` | 5 | Results requested per query |
-| `oversampling_factor` | 2 | Oversample ratio for gap filling |
-| `adaptive_budget` | false | Allocate budget proportionally to BM25 scores |
+```toml
+[server]
+max_query_budget    = 32000   # total char budget across all sources
+max_result_length   = 8000    # per-page char cap
+max_total_results   = 20      # hard cap on results per call
+max_download_mb     = 1       # streaming cap per page (MB)
+search_timeout      = 8       # seconds
+results_per_query   = 5
+oversampling_factor = 2
+adaptive_budget     = false   # [EXPERIMENTAL] proportional allocation
 
-### Environment variables
+[backends]
+default = "searxng"
 
-All settings can be overridden via `WEBGATE_` prefixed env vars:
+[backends.searxng]
+url = "http://localhost:4000"
+
+[backends.brave]
+api_key = "BSA-..."
+
+[backends.tavily]
+api_key = "tvly-..."
+
+[backends.exa]
+api_key = "..."
+
+[backends.serpapi]
+api_key = "..."
+engine  = "google"    # google | bing | duckduckgo | yandex
+
+[backends.google]
+api_key = "..."
+cx      = "..."       # Custom Search Engine ID
+
+[backends.bing]
+api_key = "..."
+market  = "en-US"
+
+[backends.http]
+url           = "https://my-search.example.com/api/search"
+query_param   = "q"
+count_param   = "limit"
+results_path  = "data.items"     # dot-path to results array in JSON response
+title_field   = "title"
+url_field     = "link"
+snippet_field = "description"
+
+[backends.http.headers]
+"Authorization" = "Bearer my-token"
+
+[llm]
+enabled               = false
+base_url              = "http://localhost:11434/v1"   # OpenAI-compatible
+api_key               = ""
+model                 = "gemma3:27b"
+timeout               = 60
+expansion_enabled     = true
+summarization_enabled = true
+llm_rerank_enabled    = false
+```
+
+Ready-to-use config examples are in [`examples/`](examples/).
+
+### Key environment variables
 
 ```bash
-WEBGATE_MAX_QUERY_BUDGET=64000
-WEBGATE_BACKENDS_DEFAULT=brave
+WEBGATE_DEFAULT_BACKEND=searxng
+WEBGATE_SEARXNG_URL=http://localhost:4000
 WEBGATE_BRAVE_API_KEY=BSA-xxx
+WEBGATE_GOOGLE_API_KEY=xxx
+WEBGATE_GOOGLE_CX=xxx
+WEBGATE_BING_API_KEY=xxx
 WEBGATE_LLM_ENABLED=true
 WEBGATE_LLM_BASE_URL=http://localhost:11434/v1
 WEBGATE_LLM_MODEL=gemma3:27b
@@ -209,33 +212,22 @@ WEBGATE_LLM_MODEL=gemma3:27b
 
 ## Search backends
 
-| Backend | API key | Notes |
-|---------|---------|-------|
+| Backend | Auth | Notes |
+|---------|------|-------|
 | **SearXNG** | none | Self-hosted, free. Default: `http://localhost:4000` |
-| **Brave** | required | Free tier available at [brave.com/search/api](https://brave.com/search/api/) |
-| **Tavily** | required | [tavily.com](https://tavily.com/) |
-| **Exa** | required | Neural search. [exa.ai](https://exa.ai/) |
-| **SerpAPI** | required | Multi-engine proxy. [serpapi.com](https://serpapi.com/) |
-
-Configure in `webgate.toml`:
-
-```toml
-[backends]
-default = "brave"
-
-[backends.brave]
-api_key = "BSA-xxx"
-
-[backends.searxng]
-url = "http://localhost:4000"
-```
+| **Brave** | API key | Free tier. [brave.com/search/api](https://brave.com/search/api/) |
+| **Tavily** | API key | AI-oriented. [tavily.com](https://tavily.com/) |
+| **Exa** | API key | Neural search. [exa.ai](https://exa.ai/) |
+| **SerpAPI** | API key | Multi-engine proxy (Google, Bing, DDG…). [serpapi.com](https://serpapi.com/) |
+| **Google** | API key + CX | Custom Search. Free: 100 req/day. [programmablesearchengine.google.com](https://programmablesearchengine.google.com/) |
+| **Bing** | API key | Web Search API. Free: 1,000 req/month. [Microsoft Azure](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api) |
+| **HTTP** | configurable | Generic REST backend — no code required, TOML-only config |
 
 ---
 
 ## LLM features (optional)
 
-All LLM features are **opt-in** — disabled by default, no data leaves your
-machine unless you enable them.
+All opt-in — disabled by default, no data leaves your machine unless enabled.
 
 | Feature | What it does |
 |---------|-------------|
@@ -247,45 +239,39 @@ Works with any OpenAI-compatible API (OpenAI, Ollama, vLLM, LM Studio, etc.):
 
 ```toml
 [llm]
-enabled = true
-base_url = "http://localhost:11434/v1"   # Ollama
-model = "gemma3:27b"
-# api_key = ""                           # not needed for Ollama
+enabled  = true
+base_url = "http://localhost:11434/v1"
+model    = "gemma3:27b"
 ```
 
 ---
 
 ## Anti-flooding protections
 
-These are the core value proposition — they exist in every code path:
+Always active — the core value proposition:
 
 | Protection | Description |
 |------------|-------------|
-| `max_download_mb` | Streaming cap per page — never buffers full response |
+| `max_download_mb` | Streaming cap — never buffers full response |
 | `max_result_length` | Hard cap on characters per cleaned page |
 | `max_query_budget` | Total character budget across all sources |
 | `max_total_results` | Hard cap on results per call |
 | Binary filter | `.pdf`, `.zip`, `.exe`, etc. filtered **before** any network request |
-| Streaming fetch | Uses `bytes_stream()` with size check — never `response.text()` |
-| Unicode sterilization | BiDi control chars, zero-width chars, surrogate pairs removed |
+| Unicode sterilization | BiDi control chars, zero-width chars removed |
 
 ---
 
 ## Library usage
-
-Use `webgate` as a Rust library in your own projects:
 
 ```rust
 use webgate::{Config, clean, fetch, query};
 
 // Clean raw HTML
 let result = clean("<html><body><p>Hello world</p></body></html>", 8000);
-println!("{}", result.text);
 
 // Fetch and clean a single page
 let config = Config::default();
 let page = fetch("https://example.com", &config).await?;
-println!("{}", page.text);
 
 // Full search pipeline
 let results = query(&["rust async programming"], &config).await?;
@@ -298,27 +284,17 @@ for source in &results.sources {
 
 | Feature | Default | Enables |
 |---------|---------|---------|
-| `backends` | on | All 5 search backends + query pipeline |
-| `llm` | off | LLM client, query expander, summarizer, LLM reranking |
+| `backends` | on | All search backends + query pipeline |
+| `llm` | off | LLM client, expander, summarizer, LLM reranking |
 
 ---
 
-## CLI flags
+## Integrations
 
-```
-mcp-webgate [OPTIONS]
-
-Options:
-  --config <PATH>            Path to webgate.toml config file
-  --default-backend <NAME>   Override default search backend
-  --debug                    Enable debug logging
-  --trace                    Enable trace-level logging
-  --log-file <PATH>          Log to file instead of stderr
-  --llm-enabled              Enable LLM features
-  --llm-base-url <URL>       LLM API base URL
-  --llm-api-key <KEY>        LLM API key
-  --llm-model <MODEL>        LLM model name
-```
+| Platform | Guide |
+|----------|-------|
+| Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code | [IDE Integration](docs/integrations/IDE.md) |
+| Gemini CLI, Claude CLI, custom agents | [Agent Integration](docs/integrations/AGENT.md) |
 
 ---
 
@@ -327,10 +303,10 @@ Options:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ```bash
-cargo build                   # build all crates
-cargo test                    # run unit tests (mocked, no services needed)
-cargo test -- --ignored       # run integration tests (requires test.toml)
-cargo run -p robot -- harness "your query"   # diagnostic harness
+cargo build                              # build all crates
+cargo test                               # unit tests (mocked, no services needed)
+cargo test -- --ignored                  # integration tests (requires test.toml)
+cargo run -p robot -- harness "query"   # diagnostic harness with stats
 ```
 
 ---

@@ -249,6 +249,9 @@ impl TestConfig {
                     hl: self.backends.serpapi.hl.clone(),
                     safe: self.backends.serpapi.safe.clone(),
                 },
+                google: GoogleConfig::default(),
+                bing: BingConfig::default(),
+                http: HttpBackendConfig::default(),
             },
             llm: LlmConfig {
                 enabled: self.llm.enabled,
@@ -313,25 +316,15 @@ pub async fn run_harness(
 
     let config = tc.to_webgate_config(&backend_name);
 
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║  webgate harness                                           ║");
-    println!("╚══════════════════════════════════════════════════════════════╝");
-    println!();
-    println!("  Query:   {query}");
-    println!("  Backend: {backend_name}");
-    println!(
-        "  LLM:     {}",
-        if config.llm.enabled {
-            format!("ON ({})", config.llm.model)
-        } else {
-            "OFF".into()
-        }
-    );
-    println!(
-        "  Budget:  {} chars, {} results max",
-        config.server.max_query_budget, config.server.max_total_results
-    );
-    println!();
+    let llm_label = if config.llm.enabled {
+        format!("ON ({})", config.llm.model)
+    } else {
+        "OFF".into()
+    };
+
+    // ── Brief header while pipeline runs ────────────────────────────
+    eprintln!("webgate harness | query={query} | backend={backend_name} | llm={llm_label}");
+    eprintln!("running pipeline...");
 
     // ── Run pipeline ────────────────────────────────────────────────
     let start = Instant::now();
@@ -345,121 +338,125 @@ pub async fn run_harness(
     .await?;
     let elapsed = start.elapsed();
 
-    // ── Pipeline stats ──────────────────────────────────────────────
-    println!("── Pipeline Stats ─────────────────────────────────────────────");
-    println!("  Total time:        {:.2}s", elapsed.as_secs_f64());
-    println!("  Queries:           {:?}", result.queries);
-    println!("  Fetched:           {}", result.stats.fetched);
-    println!("  Failed:            {}", result.stats.failed);
-    println!("  Gap filled:        {}", result.stats.gap_filled);
-    println!("  Total chars:       {}", result.stats.total_chars);
-    println!("  Per-page limit:    {}", result.stats.per_page_limit);
-    println!("  Results/query:     {}", result.stats.num_results_per_query);
-    println!();
-
-    // ── Per-source details ──────────────────────────────────────────
-    println!(
-        "── Sources ({}) ────────────────────────────────────────────────",
-        result.sources.len()
-    );
-    for s in &result.sources {
-        println!("  [{}] {}", s.id, s.title);
-        println!("      URL:       {}", s.url);
-        println!(
-            "      Content:   {} chars | Truncated: {}",
-            s.content.len(),
-            s.truncated
-        );
-        if let Some(ref snip) = s.snippet {
-            let preview: String = snip.chars().take(120).collect();
-            println!("      Snippet:   {preview}…");
-        }
-        if verbose {
-            let preview: String = s.content.chars().take(200).collect();
-            println!("      Preview:   {preview}…");
-        }
-    }
-    println!();
-
-    // ── BM25 scores ─────────────────────────────────────────────────
-    println!("── BM25 Reranking ─────────────────────────────────────────────");
+    // ── Compute BM25 scores for report ──────────────────────────────
     let (scores, _) = webgate::utils::reranker::rerank_with_scores(
         &result.queries,
         &result.sources,
     );
     let max_score = scores.iter().cloned().fold(0.0_f64, f64::max);
+
+    // ── Budget allocation data ──────────────────────────────────────
+    let total_budget = config.server.max_query_budget;
+    let total_score: f64 = scores.iter().sum();
+
+    // ====================================================================
+    //  CONSOLIDATED REPORT
+    // ====================================================================
+    println!();
+    println!("webgate harness report");
+    println!("======================");
+    println!();
+
+    // ── Config ──────────────────────────────────────────────────────
+    println!("CONFIG");
+    println!("  query:            {query}");
+    println!("  backend:          {backend_name}");
+    println!("  llm:              {llm_label}");
+    println!("  budget:           {total_budget} chars");
+    println!("  max results:      {}", config.server.max_total_results);
+    println!("  per-page limit:   {} chars", config.server.max_result_length);
+    println!("  oversampling:     {}x", config.server.oversampling_factor);
+    println!("  adaptive budget:  {}", config.server.adaptive_budget);
+    println!();
+
+    // ── Pipeline stats ──────────────────────────────────────────────
+    println!("PIPELINE");
+    println!("  time:             {:.2}s", elapsed.as_secs_f64());
+    println!("  queries:          {} {:?}", result.queries.len(), result.queries);
+    println!("  fetched:          {}", result.stats.fetched);
+    println!("  failed:           {}", result.stats.failed);
+    println!("  gap filled:       {}", result.stats.gap_filled);
+    println!("  per-page limit:   {} chars", result.stats.per_page_limit);
+    println!("  total chars:      {}", result.stats.total_chars);
+    let utilization = if total_budget > 0 {
+        (result.stats.total_chars as f64 / total_budget as f64 * 100.0).round() as usize
+    } else {
+        0
+    };
+    println!("  budget usage:     {}%", utilization);
+    println!();
+
+    // ── Sources table ───────────────────────────────────────────────
+    println!(
+        "SOURCES ({})",
+        result.sources.len()
+    );
+    println!(
+        "  {:>3}  {:>8}  {:>6}  {:>6}  {:>5}  {}",
+        "id", "bm25", "chars", "budget", "trunc", "title"
+    );
+    println!("  {}", "-".repeat(70));
     for (s, &score) in result.sources.iter().zip(scores.iter()) {
+        let budget_alloc = if total_score > 0.0 && config.server.adaptive_budget {
+            format!("{}", (score / total_score * total_budget as f64).round() as usize)
+        } else {
+            format!("{}", result.stats.per_page_limit)
+        };
         let bar_len = if max_score > 0.0 {
-            (score / max_score * 30.0).round() as usize
+            (score / max_score * 15.0).round() as usize
         } else {
             0
         };
-        let bar: String = "█".repeat(bar_len);
+        let bar: String = "#".repeat(bar_len);
         println!(
-            "  [{:>2}] {:>8.4}  {bar:<30}  {}",
-            s.id, score, s.title
+            "  [{:>1}]  {:>8.4}  {:>6}  {:>6}  {:>5}  {}",
+            s.id, score, s.content.len(), budget_alloc,
+            if s.truncated { "yes" } else { "no" },
+            s.title
+        );
+        println!(
+            "       {bar:<15}  {}",
+            s.url
         );
     }
     println!();
 
-    // ── Budget allocation ───────────────────────────────────────────
-    if config.server.adaptive_budget {
-        println!("── Adaptive Budget Allocation ─────────────────────────────────");
-        let total_budget = config.server.max_query_budget;
-        let total_score: f64 = scores.iter().sum();
-        for (s, &score) in result.sources.iter().zip(scores.iter()) {
-            let alloc = if total_score > 0.0 {
-                (score / total_score * total_budget as f64).round() as usize
-            } else {
-                total_budget / result.sources.len().max(1)
-            };
-            let usage_pct = if alloc > 0 {
-                (s.content.len() as f64 / alloc as f64 * 100.0).round() as usize
-            } else {
-                0
-            };
-            println!(
-                "  [{:>2}] budget={:>6}  actual={:>6}  usage={:>3}%  {}",
-                s.id, alloc, s.content.len(), usage_pct, s.title
-            );
-        }
-        println!();
-    }
-
     // ── Snippet pool ────────────────────────────────────────────────
     if !result.snippet_pool.is_empty() {
-        println!(
-            "── Snippet Pool ({}) ──────────────────────────────────────────",
-            result.snippet_pool.len()
-        );
+        println!("SNIPPET POOL ({})", result.snippet_pool.len());
         for sp in &result.snippet_pool {
-            let preview: String = sp.snippet.chars().take(100).collect();
-            println!("  [{:>2}] {}  —  {preview}…", sp.id, sp.title);
+            let preview: String = sp.snippet.chars().take(80).collect();
+            println!("  [{:>2}] {}  --  {preview}", sp.id, sp.title);
         }
         println!();
     }
 
     // ── LLM summary ─────────────────────────────────────────────────
     if let Some(ref summary) = result.summary {
-        println!("── LLM Summary ────────────────────────────────────────────────");
-        println!("{summary}");
-        println!();
-        println!(
-            "  Length: {} chars, ~{} words",
-            summary.len(),
-            summary.split_whitespace().count()
-        );
+        let word_count = summary.split_whitespace().count();
+        println!("LLM SUMMARY ({} chars, ~{} words)", summary.len(), word_count);
+        // Indent summary lines for readability
+        for line in summary.lines() {
+            println!("  {line}");
+        }
         println!();
     }
     if let Some(ref err) = result.llm_summary_error {
-        println!("── LLM Summary Error ──────────────────────────────────────────");
+        println!("LLM SUMMARY ERROR");
         println!("  {err}");
         println!();
     }
 
-    println!("══════════════════════════════════════════════════════════════");
-    println!("  Done in {:.2}s", elapsed.as_secs_f64());
-    println!("══════════════════════════════════════════════════════════════");
+    // ── Content previews (verbose only) ─────────────────────────────
+    if verbose {
+        println!("CONTENT PREVIEWS");
+        for s in &result.sources {
+            let preview: String = s.content.chars().take(300).collect();
+            println!("  [{}] {}", s.id, s.title);
+            println!("  {preview}");
+            println!();
+        }
+    }
 
     Ok(())
 }

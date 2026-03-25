@@ -77,7 +77,7 @@ crates/
         cleaner.rs           # scraper/html5ever HTML cleaning + regex text sterilization
       backends/              # feature: "backends" (default on)
         mod.rs               # SearchBackend trait + SearchResult
-        searxng.rs, brave.rs, tavily.rs, exa.rs, serpapi.rs
+        searxng.rs, brave.rs, tavily.rs, exa.rs, serpapi.rs, google.rs, bing.rs, http.rs
       llm/                   # feature: "llm" (default off)
         client.rs            # OpenAI-compatible async client
         expander.rs          # query expansion via LLM
@@ -152,16 +152,17 @@ When completing tasks from PLAN.md milestones, check them off (`- [x]`) immediat
 - **SearXNG** — running locally at `http://localhost:4000`. Use it for integration tests
   in M3 (query pipeline development) and as the default backend during development.
 
-## Commit and Changelog convention
+## Commit convention
 
 Do NOT add Co-Authored-By tags to commit messages.
 
-Commit messages and CHANGELOG entries follow this format:
+Commit entries follow this format:
 
 ```
-* **YYYY-MM-DD: vX.Y.Z** - <Title>
-  * <type>(<scope>): <description>
-  * ...
+<type>(<scope>): <title>
+
+  - <type>(<scope>): <description>
+  - ...
 
 ---
 
@@ -171,9 +172,18 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 
 Examples:
 ```
-feat(query): add oversampling gap filler
-fix(cleaner): resolve BiDi regex false positive
-chore(deps): bump mcp to 1.3.0
+feat(search): implement fuzzy search for products
+- feat(query): add oversampling gap filler
+- fix(cleaner): resolve BiDi regex false positive
+- chore(deps): bump mcp to 1.3.0
 ```
 
 Git commit messages use the same `type(scope): description` format (no version header).
+
+## Changelog convention
+
+When performing "BUMP vX.Y.Z", update both `CHANGELOG.md` and `README.md` following the **Keep a Changelog** standard.
+  - **Header**: Use the format `## [X.Y.Z] - YYYY-MM-DD`.
+  - **Structure**: Categorize all changes under the following semantic subsections: `### Added`, `### Changed`, `### Deprecated`, `### Fixed`, `### Removed`, or `### Security`.
+  - **Style**: Use plain indented bullet points for each change. Do not use bold text within the descriptions. 
+  - **Sync**: Ensure the version number and the latest "Added/Fixed" highlights are synchronized in the `README.md`.
