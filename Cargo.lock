@@ -1711,7 +1711,7 @@ dependencies = [
 
 [[package]]
 name = "robot"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "clap",
  "serde",
@@ -2640,7 +2640,7 @@ dependencies = [
 
 [[package]]
 name = "webgate"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "async-trait",
  "dirs-next",
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "webgate-mcp"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "clap",
  "rmcp",
