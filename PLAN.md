@@ -590,12 +590,12 @@ pub struct QueryResult {
 
 ### M5 — CI, release, publish (3 days)
 
-- [ ] GitHub Actions `ci.yml` — test on ubuntu/windows/macos
-- [ ] GitHub Actions `release.yml` — cross-compile 5 targets (pure Rust, no C deps)
-- [ ] Publish `webshift` + `webshift-mcp` on crates.io
-- [ ] README with installation instructions + standalone cleaner usage examples
-- [ ] docs.rs: annotate feature-gated API with `#[cfg_attr(docsrs, doc(cfg(feature = "...")))]` on `llm` and `backends` modules
-- [ ] **Deliverable:** Prebuilt binaries on GitHub Releases, `cargo install webshift-mcp` works
+- [x] GitHub Actions `ci.yml` — test on ubuntu/windows/macos
+- [x] GitHub Actions `release.yml` — cross-compile 5 targets (pure Rust, no C deps)
+- [x] Publish `webshift` + `webshift-mcp` on crates.io
+- [x] README with installation instructions + standalone cleaner usage examples
+- [x] docs.rs: annotate feature-gated API with `#[cfg_attr(docsrs, doc(cfg(feature = "...")))]` on `llm` and `backends` modules
+- [x] **Deliverable:** `cargo install webshift-mcp` works, prebuilt binaries via GitHub Release on tag push
 
 ### M6 — Zed extension (optional, 2 days)
 

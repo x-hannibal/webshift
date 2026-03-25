@@ -1,8 +1,9 @@
 //! Search backend trait and implementations.
 //!
-//! Each backend wraps a search engine API (SearXNG, Brave, Tavily, Exa, SerpAPI)
-//! behind the `SearchBackend` trait. The `create_backend` factory selects one
-//! based on `config.backends.default`.
+//! Eight backends are available: SearXNG, Brave, Tavily, Exa, SerpAPI, Google,
+//! Bing, and a generic HTTP backend. Each implements the [`SearchBackend`] trait.
+//! Use [`create_backend`] to instantiate the default, or [`create_backend_by_name`]
+//! to select one explicitly.
 
 pub mod bing;
 pub mod brave;

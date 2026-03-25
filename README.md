@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.0-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.0)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.1-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.1)
 [![Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/annibale-x/webshift/issues)
 
 ---

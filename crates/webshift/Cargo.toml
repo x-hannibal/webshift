@@ -6,6 +6,9 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Denoised web search library — fetch, clean, and rerank web content for AI agents."
+readme = "../../README.md"
+keywords = ["web-search", "html-to-text", "mcp", "llm", "web-scraping"]
+categories = ["text-processing", "web-programming"]
 
 [features]
 default = ["backends"]

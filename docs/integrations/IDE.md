@@ -123,16 +123,15 @@ Add to `~/.config/zed/settings.json`:
 {
   "context_servers": {
     "webshift": {
-      "command": {
-        "path": "mcp-webshift",
-        "args": ["--default-backend", "searxng"]
-      }
+      "command": "mcp-webshift",
+      "args": ["--default-backend", "searxng"],
+      // or env object 
     }
   }
 }
 ```
 
-> Zed uses `"context_servers"` (not `"mcpServers"`) and requires a nested `"command"` object.
+> Zed uses `"context_servers"` (not `"mcpServers"`).
 
 ---
 

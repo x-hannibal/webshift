@@ -21,9 +21,12 @@ use std::path::{Path, PathBuf};
 /// TOML: `adaptive_budget = "auto"` / `"on"` / `"off"` / `true` / `false`
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum AdaptiveBudget {
+    /// Redistribute only when BM25 score spread exceeds the dominance threshold.
     #[default]
     Auto,
+    /// Always redistribute budget proportionally to BM25 scores.
     On,
+    /// Flat per-page cap, no proportional redistribution.
     Off,
 }
 
@@ -62,11 +65,17 @@ impl<'de> Deserialize<'de> for AdaptiveBudget {
 }
 
 /// Top-level configuration.
+///
+/// Loaded via [`Config::load()`] (searches for `webshift.toml` then applies
+/// `WEBSHIFT_*` env overrides) or constructed directly for embedding.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
+    /// Server-level settings and anti-flooding caps.
     pub server: ServerConfig,
+    /// Search backend selection and per-backend credentials.
     pub backends: BackendsConfig,
+    /// Optional LLM integration settings (requires `llm` feature).
     pub llm: LlmConfig,
 }
 
@@ -74,21 +83,38 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct ServerConfig {
+    /// Streaming download cap per page in megabytes (default: 1).
     pub max_download_mb: u32,
+    /// Hard character cap per cleaned page (default: 8000).
     pub max_result_length: usize,
+    /// Per-request timeout in seconds for fetch and search calls (default: 8).
     pub search_timeout: u64,
+    /// Oversample multiplier: fetch `results_per_query * factor` candidates (default: 2).
     pub oversampling_factor: u32,
+    /// When `true`, replace failed fetches with reserve-pool pages (default: false).
     pub auto_recovery_fetch: bool,
+    /// Hard cap on total results returned per query call (default: 20).
     pub max_total_results: usize,
+    /// Total character budget across all sources in a single query (default: 32000).
     pub max_query_budget: usize,
+    /// Maximum number of search queries per call, including LLM expansions (default: 5).
     pub max_search_queries: usize,
+    /// Results requested per backend query (default: 5).
     pub results_per_query: usize,
+    /// Domain blocklist — URLs matching these domains are silently dropped.
     pub blocked_domains: Vec<String>,
+    /// Domain allowlist — when non-empty, only these domains pass the filter.
     pub allowed_domains: Vec<String>,
+    /// Enable debug-level logging (default: false).
     pub debug: bool,
+    /// Path to a log file (empty = stderr only).
     pub log_file: String,
+    /// Enable trace-level logging (default: false).
     pub trace: bool,
+    /// Controls proportional budget allocation after BM25 reranking.
     pub adaptive_budget: AdaptiveBudget,
+    /// Fetch factor for adaptive budget: fetch up to `max_result_length * factor` chars
+    /// before trimming proportionally (default: 3).
     pub adaptive_budget_fetch_factor: u32,
     /// BCP-47 language tag passed to search backends (e.g. "en", "it", "all").
     /// Empty string = let the backend decide.
@@ -126,10 +152,11 @@ impl ServerConfig {
     }
 }
 
-/// Backend selection and per-backend config.
+/// Backend selection and per-backend credentials/settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct BackendsConfig {
+    /// Name of the default backend (e.g. `"searxng"`, `"brave"`, `"google"`).
     pub default: String,
     pub searxng: SearxngConfig,
     pub brave: BraveConfig,
@@ -322,19 +349,29 @@ impl Default for HttpBackendConfig {
     }
 }
 
-/// LLM integration settings (opt-in).
+/// LLM integration settings (opt-in, requires the `llm` feature).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct LlmConfig {
+    /// Master switch for all LLM features (default: false).
     pub enabled: bool,
+    /// Base URL of an OpenAI-compatible API (default: local Ollama).
     pub base_url: String,
+    /// API key for the LLM endpoint.
     pub api_key: String,
+    /// Model name to use (default: `"llama3.2"`).
     pub model: String,
+    /// Request timeout in seconds (default: 30).
     pub timeout: u64,
+    /// Enable LLM-based query expansion (default: true when `enabled`).
     pub expansion_enabled: bool,
+    /// Enable LLM-based summarization of results (default: true when `enabled`).
     pub summarization_enabled: bool,
+    /// Enable LLM-assisted reranking as a second pass after BM25 (default: false).
     pub llm_rerank_enabled: bool,
+    /// Maximum word count for the summary (0 = auto from budget).
     pub max_summary_words: usize,
+    /// Multiplier for the input budget sent to the summarizer (default: 3).
     pub input_budget_factor: u32,
 }
 

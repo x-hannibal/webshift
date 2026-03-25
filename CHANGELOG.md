@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1] - 2026-03-25
+
+### Added
+
+- Comprehensive rustdoc documentation for all public types, fields, and functions in the `webshift` library crate
+- Crate-level doc with feature flags table, three usage examples (clean, fetch, query), and anti-flooding overview
+- Field-level doc comments on `CleanResult`, `FetchResult`, `Source`, `SnippetEntry`, `Stats`, `QueryResult`, `WebshiftError`, `Config`, `ServerConfig`, `AdaptiveBudget`, `BackendsConfig`, `LlmConfig`
+- `readme`, `keywords`, and `categories` fields in both crate Cargo.toml files for crates.io display
+- 3 new doctests from inline code examples
+
+### Changed
+
+- `backends/mod.rs` module doc updated to list all 8 backends (was 5)
+
+---
+
 ## [0.2.0] - 2026-03-25
 
 ### Changed

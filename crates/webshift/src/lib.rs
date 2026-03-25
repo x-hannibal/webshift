@@ -2,28 +2,68 @@
 
 //! # webshift
 //!
-//! Denoised web search library for AI agents.
+//! Denoised web search library for AI agents. Webshift fetches, cleans, reranks,
+//! and budget-caps web content so that LLM pipelines receive high-signal context
+//! without flooding their context windows. Every code path enforces hard limits
+//! on download size, per-page character count, and total query budget.
 //!
-//! Fetches, cleans, and reranks web content with hard caps on context size.
-//! Designed to prevent context flooding in LLM pipelines.
+//! ## Feature flags
 //!
-//! ## Quick start
+//! | Feature | Default | Enables |
+//! |---------|---------|---------|
+//! | `backends` | **on** | All 8 search backends (SearXNG, Brave, Tavily, Exa, SerpAPI, Google, Bing, HTTP) and the [`query()`] pipeline |
+//! | `llm` | off | OpenAI-compatible LLM client, query expansion, summarization, and LLM-assisted reranking |
+//!
+//! Minimal dependency (cleaner + fetcher only):
+//! ```toml
+//! webshift = { version = "0.1", default-features = false }
+//! ```
+//!
+//! ## Use cases
+//!
+//! ### HTML cleaning only (`default-features = false`)
+//!
+//! Synchronous, zero-network, zero-config HTML-to-text conversion:
+//!
+//! ```rust
+//! let result = webshift::clean("<html><body><nav>menu</nav><p>Hello world</p></body></html>", 8000);
+//! assert!(result.text.contains("Hello world"));
+//! assert!(!result.text.contains("menu")); // noise removed
+//! ```
+//!
+//! ### Fetch and clean a single page
 //!
 //! ```rust,no_run
-//! use webshift::Config;
-//!
-//! // Standalone HTML cleaning — no network, no config needed
-//! let result = webshift::clean("<html><body><p>Hello</p></body></html>", 8000);
-//! println!("{}", result.text);
-//!
-//! // Fetch and clean a page
 //! # async fn example() -> Result<(), webshift::WebshiftError> {
-//! let config = Config::default();
+//! let config = webshift::Config::default();
 //! let result = webshift::fetch("https://example.com", &config).await?;
-//! println!("{}", result.text);
+//! println!("title: {}", result.title);
+//! println!("text:  {}...", &result.text[..100]);
 //! # Ok(())
 //! # }
 //! ```
+//!
+//! ### Full search pipeline (requires `backends`)
+//!
+//! ```rust,no_run
+//! # async fn example() -> Result<(), webshift::WebshiftError> {
+//! let config = webshift::Config::load()?;
+//! let result = webshift::query(&["rust async runtime"], &config).await?;
+//! for source in &result.sources {
+//!     println!("[{}] {} — {}", source.id, source.title, source.url);
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Anti-flooding protections
+//!
+//! - `max_download_mb`: streaming cap per page (never buffers the full response)
+//! - `max_result_length`: hard character cap per cleaned page
+//! - `max_query_budget`: total character budget across all sources
+//! - `max_total_results`: hard cap on results per call
+//! - Binary extension filter runs **before** any network request
+//! - Unicode/BiDi sterilization in the cleaner
 
 pub mod config;
 pub mod scraper;
@@ -48,50 +88,75 @@ pub use config::Config;
 /// Available with `default-features = false` — no network dependencies.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CleanResult {
+    /// Cleaned plain text with HTML noise and Unicode control characters removed.
     pub text: String,
+    /// Page title extracted from `<title>` or first `<h1>`, empty if not found.
     pub title: String,
+    /// `true` if the output was truncated to `max_chars`.
     pub truncated: bool,
+    /// Length of `text` in bytes (ASCII-safe after sterilization).
     pub char_count: usize,
 }
 
 /// Result of fetching and cleaning a single page.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct FetchResult {
+    /// The URL that was fetched (after any redirects, this is the original request URL).
     pub url: String,
+    /// Page title extracted from `<title>` or first `<h1>`.
     pub title: String,
+    /// Cleaned plain text content.
     pub text: String,
+    /// `true` if the output was truncated to [`ServerConfig::max_result_length`](config::ServerConfig::max_result_length).
     pub truncated: bool,
+    /// Length of `text` in bytes.
     pub char_count: usize,
 }
 
 /// A single source in a query result.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Source {
+    /// 1-based rank after BM25 reranking.
     pub id: usize,
+    /// Page title (from HTML or backend metadata).
     pub title: String,
+    /// Source URL.
     pub url: String,
+    /// Backend-provided snippet, if different from `content`.
     pub snippet: Option<String>,
+    /// Cleaned page content, budget-capped.
     pub content: String,
+    /// `true` if `content` was truncated to fit the budget.
     pub truncated: bool,
 }
 
 /// A snippet-only entry from the oversampling reserve pool.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SnippetEntry {
+    /// 1-based ID continuing after the last [`Source`].
     pub id: usize,
+    /// Page title from backend metadata.
     pub title: String,
+    /// Source URL.
     pub url: String,
+    /// Backend-provided snippet text.
     pub snippet: String,
 }
 
 /// Statistics for a query execution.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Stats {
+    /// Number of pages successfully fetched and cleaned.
     pub fetched: usize,
+    /// Number of pages that failed to fetch.
     pub failed: usize,
+    /// Number of reserve-pool pages used to replace failed fetches.
     pub gap_filled: usize,
+    /// Total characters across all sources after budget allocation.
     pub total_chars: usize,
+    /// Per-page character limit applied during this query.
     pub per_page_limit: usize,
+    /// Effective results-per-query count used.
     pub num_results_per_query: usize,
     /// Total raw HTML bytes downloaded before cleaning.
     pub raw_bytes: usize,
@@ -100,12 +165,18 @@ pub struct Stats {
 /// Result of a full search query pipeline.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct QueryResult {
+    /// Search queries actually executed (may include LLM-expanded queries).
     pub queries: Vec<String>,
+    /// Fetched, cleaned, and reranked sources.
     pub sources: Vec<Source>,
+    /// Oversampled pages that were not fetched, available as snippet-only references.
     pub snippet_pool: Vec<SnippetEntry>,
+    /// Pipeline execution statistics.
     pub stats: Stats,
+    /// LLM-generated summary with citations (requires `llm` feature).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    /// Error message if LLM summarization was attempted but failed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub llm_summary_error: Option<String>,
 }
@@ -117,18 +188,23 @@ pub struct QueryResult {
 /// Top-level error type for the webshift library.
 #[derive(Debug, thiserror::Error)]
 pub enum WebshiftError {
+    /// Network-level error from `reqwest` (timeouts, DNS, TLS, etc.).
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
 
+    /// HTML parsing or content extraction failure.
     #[error("Parse error: {0}")]
     Parse(String),
 
+    /// Invalid or missing configuration (TOML parse error, missing required field).
     #[error("Configuration error: {0}")]
     Config(String),
 
+    /// Search backend error (unknown backend name, missing API key, API failure).
     #[error("Backend error: {0}")]
     Backend(String),
 
+    /// LLM client error (connection failure, malformed response).
     #[error("LLM error: {0}")]
     Llm(String),
 }
