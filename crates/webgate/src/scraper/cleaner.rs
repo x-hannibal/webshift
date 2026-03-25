@@ -240,16 +240,15 @@ pub fn process_page(raw_html: &str, snippet: &str, max_chars: usize) -> (String,
     let mut text = clean_text(&clean_html(raw_html));
 
     // Heuristic: fall back to snippet if content is low-quality
-    if text.is_empty()
+    if (text.is_empty()
         || (!snippet.is_empty() && text.len() < snippet.len())
-        || text.matches('\u{fffd}').count() > 10
+        || text.matches('\u{fffd}').count() > 10)
+        && !snippet.is_empty()
     {
-        if !snippet.is_empty() {
-            text = format!(
-                "[Using search snippet - page content was low quality] {}",
-                snippet
-            );
-        }
+        text = format!(
+            "[Using search snippet - page content was low quality] {}",
+            snippet
+        );
     }
 
     let (text, truncated) = apply_window(&text, max_chars);

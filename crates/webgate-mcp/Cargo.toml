@@ -12,7 +12,7 @@ name = "mcp-webgate"
 path = "src/main.rs"
 
 [dependencies]
-webgate = { path = "../webgate", features = ["llm"] }
+webgate = { version = "0.1", path = "../webgate", features = ["llm"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std"] }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

@@ -9,22 +9,12 @@ use std::time::Instant;
 
 // ── TestConfig (mirrors crates/webgate/tests/common/mod.rs) ─────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct TestConfig {
     pub server: TestServerConfig,
     pub backends: TestBackendsConfig,
     pub llm: TestLlmConfig,
-}
-
-impl Default for TestConfig {
-    fn default() -> Self {
-        Self {
-            server: TestServerConfig::default(),
-            backends: TestBackendsConfig::default(),
-            llm: TestLlmConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -161,17 +151,12 @@ impl Default for TestSerpapi {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct TestGoogle {
     pub enabled: bool,
     pub api_key: String,
     pub cx: String,
-}
-impl Default for TestGoogle {
-    fn default() -> Self {
-        Self { enabled: false, api_key: String::new(), cx: String::new() }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -187,16 +172,11 @@ impl Default for TestBing {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct TestHttp {
     pub enabled: bool,
     pub url: String,
-}
-impl Default for TestHttp {
-    fn default() -> Self {
-        Self { enabled: false, url: String::new() }
-    }
 }
 
 #[derive(Debug, Deserialize)]

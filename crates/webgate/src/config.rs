@@ -62,22 +62,12 @@ impl<'de> Deserialize<'de> for AdaptiveBudget {
 }
 
 /// Top-level configuration.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub server: ServerConfig,
     pub backends: BackendsConfig,
     pub llm: LlmConfig,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            backends: BackendsConfig::default(),
-            llm: LlmConfig::default(),
-        }
-    }
 }
 
 /// Server-level settings and anti-flooding caps.
@@ -255,21 +245,12 @@ impl Default for SerpapiConfig {
 }
 
 /// Google Custom Search API config.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
 pub struct GoogleConfig {
     pub api_key: String,
     /// Custom Search Engine ID (from programmablesearchengine.google.com).
     pub cx: String,
-}
-
-impl Default for GoogleConfig {
-    fn default() -> Self {
-        Self {
-            api_key: String::new(),
-            cx: String::new(),
-        }
-    }
 }
 
 /// Bing Web Search API config.

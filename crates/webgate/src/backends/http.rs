@@ -79,10 +79,8 @@ impl SearchBackend for HttpBackend {
         if !cfg.count_param.is_empty() {
             params.push((cfg.count_param.clone(), num_results.to_string()));
         }
-        if let Some(lang) = lang {
-            if !cfg.lang_param.is_empty() {
-                params.push((cfg.lang_param.clone(), lang.to_string()));
-            }
+        if let Some(lang) = lang && !cfg.lang_param.is_empty() {
+            params.push((cfg.lang_param.clone(), lang.to_string()));
         }
         // Merge extra static params from config
         for (k, v) in &cfg.extra_params {

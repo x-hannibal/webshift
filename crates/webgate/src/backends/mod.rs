@@ -24,6 +24,7 @@ pub struct SearchResult {
 }
 
 /// Abstract search backend interface.
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 #[async_trait::async_trait]
 pub trait SearchBackend: Send + Sync {
     async fn search(
@@ -35,6 +36,7 @@ pub trait SearchBackend: Send + Sync {
 }
 
 /// Create a backend from config. Returns a boxed trait object.
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 pub fn create_backend(
     config: &BackendsConfig,
 ) -> Result<Box<dyn SearchBackend>, crate::WebgateError> {
@@ -42,6 +44,7 @@ pub fn create_backend(
 }
 
 /// Create a specific backend by name.
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 pub fn create_backend_by_name(
     name: &str,
     config: &BackendsConfig,

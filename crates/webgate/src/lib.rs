@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! # webgate
 //!
 //! Denoised web search library for AI agents.
@@ -28,9 +30,11 @@ pub mod scraper;
 pub mod utils;
 
 #[cfg(feature = "backends")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 pub mod backends;
 
 #[cfg(feature = "llm")]
+#[cfg_attr(docsrs, doc(cfg(feature = "llm")))]
 pub mod llm;
 
 pub use config::Config;
@@ -206,6 +210,7 @@ pub async fn fetch(url: &str, config: &Config) -> Result<FetchResult, WebgateErr
 ///
 /// Requires the `backends` feature (enabled by default).
 #[cfg(feature = "backends")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 pub async fn query(queries: &[&str], config: &Config) -> Result<QueryResult, WebgateError> {
     query_with_options(queries, config, None, None, None).await
 }
@@ -216,6 +221,7 @@ pub async fn query(queries: &[&str], config: &Config) -> Result<QueryResult, Web
 /// - `lang`: language filter
 /// - `backend_name`: override the default backend
 #[cfg(feature = "backends")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backends")))]
 pub async fn query_with_options(
     queries: &[&str],
     config: &Config,
@@ -457,7 +463,7 @@ pub async fn query_with_options(
     let use_adaptive = match cfg.adaptive_budget {
         config::AdaptiveBudget::On => true,
         config::AdaptiveBudget::Off => false,
-        config::AdaptiveBudget::Auto => bm25_scores_opt.as_ref().map_or(false, |scores| {
+        config::AdaptiveBudget::Auto => bm25_scores_opt.as_ref().is_some_and(|scores| {
             let total: f64 = scores.iter().sum();
             let max: f64 = scores.iter().cloned().fold(0.0_f64, f64::max);
             let n = scores.len() as f64;

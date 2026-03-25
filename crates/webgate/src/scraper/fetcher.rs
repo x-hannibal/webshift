@@ -103,6 +103,7 @@ async fn fetch_single(
     let t0 = Instant::now();
     let mut raw_bytes = 0usize;
 
+    #[allow(clippy::needless_range_loop)]
     for attempt in 0..=BACKOFF_DELAYS.len() {
         let response = match client
             .get(&url)
@@ -204,12 +205,10 @@ pub async fn fetch_urls(
     let mut html_map: HashMap<String, String> = HashMap::new();
     let mut timing_map: HashMap<String, (f64, usize)> = HashMap::new();
 
-    for result in results {
-        if let Ok((url, html, elapsed, bytes)) = result {
-            timing_map.insert(url.clone(), (elapsed, bytes));
-            if let Some(h) = html {
-                html_map.insert(url, h);
-            }
+    for (url, html, elapsed, bytes) in results.into_iter().flatten() {
+        timing_map.insert(url.clone(), (elapsed, bytes));
+        if let Some(h) = html {
+            html_map.insert(url, h);
         }
     }
 
