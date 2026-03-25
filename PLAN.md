@@ -13,12 +13,16 @@ port addresses a different set of problems:
 
 - **Distribution:** A single static binary replaces the Python+pip+venv toolchain.
   Agent config becomes `{ "command": "mcp-webgate" }` — nothing else to install.
-- **Embedding:** Agents written in Rust can call `webgate::fetch()` and `webgate::query()`
-  in-process, without spawning a subprocess or speaking JSON-RPC.
+- **Embedding:** Agents written in Rust can call `webgate::fetch()`, `webgate::query()`
+  and `webgate::clean()` in-process, without spawning a subprocess or speaking JSON-RPC.
 - **Containers:** A scratch Docker image with one binary (~8 MB) replaces ~200 MB Python images.
 - **CI/Edge:** No interpreter setup step. Copy binary, run.
 - **Composability:** Other Rust crates can depend on `webgate` and build on top of it
-  (aggregators, proxy MCP servers, agent toolkits).
+  (aggregators, proxy MCP servers, agent toolkits, RAG pipelines).
+- **HTML cleaning for LLM pipelines:** `webgate::clean()` is a first-class public API,
+  usable standalone to strip noise elements and sterilize HTML into LLM-ready text.
+  Removing excess markup can reduce token usage by ~70% while preserving all meaningful
+  content — useful for any Rust project that processes web content with an LLM.
 
 The Python version continues to exist on PyPI as `mcp-webgate`. This is not a replacement,
 it is a native alternative.
@@ -39,12 +43,12 @@ webgate/                            # repo root
 │   ├── webgate/                    # library crate (crates.io: webgate)
 │   │   ├── Cargo.toml
 │   │   └── src/
-│   │       ├── lib.rs              # public API: fetch(), query(), Config
+│   │       ├── lib.rs              # public API: fetch(), query(), clean(), Config
 │   │       ├── config.rs           # serde config (toml + env + CLI)
 │   │       ├── scraper/
 │   │       │   ├── mod.rs
 │   │       │   ├── fetcher.rs      # reqwest concurrent fetcher, streaming, UA rotation
-│   │       │   └── cleaner.rs      # libxml2 HTML cleaning + regex text sterilization
+│   │       │   └── cleaner.rs      # scraper/html5ever HTML cleaning + regex text sterilization
 │   │       ├── backends/
 │   │       │   ├── mod.rs          # SearchBackend trait + SearchResult
 │   │       │   ├── searxng.rs
@@ -62,11 +66,16 @@ webgate/                            # repo root
 │   │           ├── url.rs          # sanitize, dedup, binary filter, domain filter
 │   │           └── reranker.rs     # BM25 deterministic + LLM reranking
 │   │
-│   └── webgate-mcp/                # binary crate (crates.io: webgate-mcp)
+│   ├── webgate-mcp/                # binary crate (crates.io: webgate-mcp)
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       └── main.rs             # MCP server: tool registration, stdio transport
+│   │                               # [[bin]] name = "mcp-webgate"
+│   │
+│   └── robot/                      # internal dev tool (publish = false)
 │       ├── Cargo.toml
 │       └── src/
-│           └── main.rs             # MCP server: tool registration, stdio transport
-│                                   # [[bin]] name = "mcp-webgate"
+│           └── main.rs             # bump, promote, unpromote, publish
 │
 ├── tests/                          # integration tests
 │   ├── test_cleaner.rs
@@ -88,7 +97,7 @@ webgate/                            # repo root
 
 | Python | Rust crate | Purpose | Notes |
 |--------|-----------|---------|-------|
-| `lxml` | **`libxml`** (0.3.8) | HTML parsing + XPath | Bindings to libxml2. Same engine, same XPath expressions as Python. See §4. |
+| `lxml` | **`scraper`** (0.20+) | HTML parsing + CSS selectors | Pure Rust (html5ever). See §4. |
 | `httpx` | **`reqwest`** + **`tokio`** | Async HTTP, streaming, connection pool | `reqwest` stream API mirrors httpx `client.stream()` pattern |
 | `pydantic` + `tomllib` | **`serde`** + **`toml`** | Config deserialization | Derive-based, zero boilerplate |
 | `re` | **`regex`** | Unicode/BiDi sterilization, noise line filter | Same patterns, better performance |
@@ -98,84 +107,91 @@ webgate/                            # repo root
 | — | **`thiserror`** | Error types | |
 | — | **`tracing`** | Structured logging (debug/trace) | |
 
+> **No C dependencies.** The library is pure Rust + pure Rust transitive deps.
+> This enables static binaries on all targets without system package requirements,
+> and keeps the door open for a future `wasm32-wasi` feature-flagged build.
+
 ### `webgate-mcp` (binary)
 
 | Dependency | Purpose |
 |-----------|---------|
-| `webgate` | The library |
-| **`rmcp`** or MCP SDK | MCP server, stdio transport, tool registration |
+| `webgate` | The library (all features enabled) |
+| **`rmcp`** | MCP server, stdio transport, tool registration (official Anthropic Rust SDK) |
 | **`clap`** | CLI argument parsing |
 | **`tokio`** (full) | Async runtime |
 
-### Build-time / system
+### Feature flags
 
-| Dependency | When | How |
-|-----------|------|-----|
-| `libxml2` | `cargo build` / `cargo run` | System package: `apt install libxml2-dev` / `brew install libxml2` / `vcpkg install libxml2:x64-windows` |
-| `libxml2` (static) | CI release builds | Static linking via `vcpkg` or bundled source. Produces self-contained binary. |
-| `pkg-config` | Build time | Used by `libxml` crate to locate libxml2 |
+The `webgate` library uses Cargo feature flags to keep the default footprint minimal:
+
+| Feature | Default | Enables |
+|---------|---------|---------|
+| `llm` | off | `llm/` module: query expansion, summarization, LLM reranking |
+| `backends` | on | All search backends (searxng, brave, tavily, exa, serpapi) |
+
+Users who want only the cleaner or the fetcher add:
+
+```toml
+webgate = { version = "0.1", default-features = false }
+```
+
+`webgate-mcp` enables all features.
 
 ---
 
-## 4. HTML cleaning: libxml2 bindings rationale
+## 4. HTML cleaning: pure-Rust approach
 
-The Python cleaner uses lxml (Python bindings to libxml2) with a single XPath expression:
+### Why not libxml2
 
-```python
-_NOISE_XPATH = (
-    "//script | //style | //nav | //footer | //header"
-    " | //aside | //form | //iframe | //noscript"
-    " | //svg | //button | //input | //select | //textarea"
-)
-```
+The original plan proposed `libxml` Rust bindings (wrapping libxml2 in C) to reuse the
+same XPath expressions from the Python version. After analysis, this was rejected:
 
-The `libxml` Rust crate wraps the **same C library** (libxml2). This means:
+| Concern | Detail |
+|---------|--------|
+| C dependency | Breaks the "zero system deps" goal. Requires `apt install libxml2-dev` / `brew install libxml2` / `vcpkg` on Windows. Static linking adds CI complexity, especially on Windows (~1–2 extra days). |
+| WASM | `libxml2` bindings cannot compile to `wasm32-wasi`. Pure Rust parsers can, behind a feature flag. |
+| Overkill | The XPath used is a single fixed noise-removal pattern. No dynamic queries, no XPath axes, no namespace handling. CSS selectors cover this use case completely. |
 
-- **Same XPath expression** ports verbatim — no rewriting to CSS selectors
-- **Same HTML parser** — identical parse tree, identical edge-case behavior
-- **Same `text_content()` equivalent** — `node.get_content()` in Rust
-- **Same `drop_tree()` equivalent** — `node.unlink_node()` in Rust
+### Chosen approach: `scraper` (html5ever)
 
-Example Rust port:
+The `scraper` crate (pure Rust, based on html5ever — Mozilla's production HTML parser)
+covers everything the cleaner needs with a single CSS selector string:
 
 ```rust
-use libxml::parser::Parser;
-use libxml::xpath::Context;
+use scraper::{Html, Selector};
+
+static NOISE_SEL: std::sync::LazyLock<Selector> = std::sync::LazyLock::new(|| {
+    Selector::parse(
+        "script,style,nav,footer,header,aside,form,\
+         iframe,noscript,svg,button,input,select,textarea"
+    ).unwrap()
+});
 
 pub fn clean_html(raw: &str) -> String {
-    let parser = Parser::default_html();
-    let doc = match parser.parse_string(raw) {
-        Ok(d) => d,
-        Err(_) => return String::new(),
-    };
-    let ctx = match Context::new(&doc) {
-        Ok(c) => c,
-        Err(_) => return String::new(),
-    };
-
-    let xpath = "//script|//style|//nav|//footer|//header\
-                 |//aside|//form|//iframe|//noscript\
-                 |//svg|//button|//input|//select|//textarea";
-
-    if let Ok(result) = ctx.evaluate(xpath) {
-        for node in result.get_nodes_as_vec() {
-            node.unlink_node();
-        }
+    let mut doc = Html::parse_document(raw);
+    let to_remove: Vec<_> = doc.select(&NOISE_SEL)
+        .map(|el| el.id())
+        .collect();
+    for id in to_remove {
+        doc.tree.get_mut(id).unwrap().detach();
     }
-
-    doc.get_root_element()
-        .map(|root| root.get_content())
-        .unwrap_or_default()
+    doc.root_element()
+        .text()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 ```
+
+This is semantically equivalent to the Python `lxml` XPath approach. The element set
+being removed is identical; only the query language changes (CSS selectors vs XPath).
 
 Alternatives considered and rejected:
 
 | Crate | Why not |
 |-------|---------|
-| `scraper` | CSS selectors only — would require rewriting all XPath. No `text_content()` equivalent built in. |
-| `lol_html` | Streaming rewriter (Cloudflare) — great for transforms, poor for "parse → query → extract text" pattern. No XPath. |
-| `html5ever` | Low-level tokenizer/tree builder. No XPath. Would require building our own query layer. |
+| `libxml` | C bindings to libxml2 — breaks zero-deps goal, blocks WASM, complex Windows CI. See above. |
+| `lol_html` | Streaming rewriter (Cloudflare) — great for transforms, poor for "parse → query → extract text" pattern. |
+| `html5ever` | Low-level tokenizer/tree builder. No query layer — `scraper` wraps it at the right abstraction. |
 | `select.rs` | CSS selectors only, less maintained than `scraper`. |
 
 ---
@@ -200,15 +216,15 @@ pub struct Config {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
 pub struct ServerConfig {
-    pub max_download_mb: u32,        // default 1
-    pub max_result_length: usize,    // default 8000
-    pub search_timeout: u64,         // default 8
-    pub oversampling_factor: u32,    // default 2
-    pub auto_recovery_fetch: bool,   // default false
-    pub max_total_results: usize,    // default 20
-    pub max_query_budget: usize,     // default 32000
-    pub max_search_queries: usize,   // default 5
-    pub results_per_query: usize,    // default 5
+    pub max_download_mb: u32,              // default 1
+    pub max_result_length: usize,          // default 8000
+    pub search_timeout: u64,               // default 8
+    pub oversampling_factor: u32,          // default 2
+    pub auto_recovery_fetch: bool,         // default false
+    pub max_total_results: usize,          // default 20
+    pub max_query_budget: usize,           // default 32000
+    pub max_search_queries: usize,         // default 5
+    pub results_per_query: usize,          // default 5
     pub blocked_domains: Vec<String>,
     pub allowed_domains: Vec<String>,
     pub debug: bool,
@@ -268,9 +284,9 @@ while let Some(chunk) = stream.next().await {
 Two-stage pipeline (same as Python):
 
 **Stage 1: `clean_html(raw) -> String`**
-- Parse HTML with `Parser::default_html()`
-- Remove noise nodes via XPath (see §4)
-- Extract text via `get_content()`
+- Parse HTML with `Html::parse_document()`
+- Remove noise nodes via CSS selector (see §4)
+- Collect text via `.text()` iterator
 
 **Stage 2: `clean_text(text) -> String`**
 - Unicode/BiDi sterilization regex (same `_UNICODE_JUNK` pattern)
@@ -282,7 +298,7 @@ Two-stage pipeline (same as Python):
 - Collapse 3+ newlines to double
 
 **Additional functions:**
-- `extract_title(raw) -> String` — XPath `.//title`
+- `extract_title(raw) -> String` — CSS selector `title`
 - `apply_window(text, max_chars) -> (String, bool)` — line-boundary truncation
 - `process_page(raw, snippet, max_chars) -> (String, String, bool)` — full pipeline
 
@@ -342,6 +358,7 @@ Port the `_bm25_scores()` function directly. ~60 lines of Rust.
 
 **Tier 2 (LLM):** Send a prompt to the LLM client asking for a ranked JSON array of
 source IDs. Parse response, reorder. Fallback to input order on error.
+Only available when the `llm` feature flag is enabled.
 
 ### 5.8 `llm/client.rs` — OpenAI-compatible chat client
 
@@ -387,7 +404,7 @@ Register three MCP tools:
 - `webgate_fetch(url, max_chars?)` — single page fetch
 - `webgate_query(queries, num_results_per_query?, lang?, backend?)` — full pipeline
 
-Use `rmcp` (or the Rust MCP SDK when stable) for:
+Use `rmcp` (official Anthropic Rust MCP SDK) for:
 - Tool schema registration
 - Stdio transport
 - JSON-RPC handling
@@ -404,7 +421,7 @@ These are the core value proposition. Every protection must exist in the Rust po
 |-----------|----------------|--------------|----------------|
 | `max_download_mb` streaming cap | `fetcher.py:104-108` | `fetcher.rs` | `bytes_stream()` + byte counter + break |
 | `max_result_length` per-page cap | `cleaner.py:163-190` | `cleaner.rs` | `apply_window()` line-boundary truncation |
-| `max_query_budget` total budget | `query.py:187-197` | pipeline in lib.rs or query module | Budget ÷ candidates = per-page limit |
+| `max_query_budget` total budget | `query.py:187-197` | pipeline in `lib.rs` | Budget ÷ candidates = per-page limit |
 | `max_total_results` global cap | `query.py:99` | pipeline | `min(per_query × n_queries, cap)` |
 | Binary extension filter | `url.py:61-64` | `url.rs` | Check before any network request |
 | Streaming (no buffering) | `fetcher.py:88` | `fetcher.rs` | `reqwest` streaming — **never** `response.text()` |
@@ -417,26 +434,21 @@ These are the core value proposition. Every protection must exist in the Rust po
 ### Development
 
 ```bash
-# Linux/macOS — libxml2 is typically already installed
-cargo run -p webgate-mcp -- --default-backend searxng
-
-# Windows
-vcpkg install libxml2:x64-windows
-set VCPKG_ROOT=C:\vcpkg
+# Linux/macOS/Windows — no system packages required (pure Rust)
 cargo run -p webgate-mcp -- --default-backend searxng
 ```
 
 ### CI release builds (static linking)
 
-Cross-compile for 5 targets with libxml2 statically linked:
+Cross-compile for 5 targets. All pure Rust — no C library complications:
 
-| Target | OS | Libxml2 strategy |
-|--------|-----|-----------------|
-| `x86_64-unknown-linux-gnu` | ubuntu-latest | `apt install libxml2-dev` + static link flag |
-| `aarch64-unknown-linux-gnu` | ubuntu-latest | `cross` with static libxml2 in Docker |
-| `x86_64-apple-darwin` | macos-latest | `brew install libxml2` + static link |
-| `aarch64-apple-darwin` | macos-latest | same (Apple Silicon native) |
-| `x86_64-pc-windows-msvc` | windows-latest | `vcpkg install libxml2:x64-windows-static` |
+| Target | OS | Strategy |
+|--------|-----|---------|
+| `x86_64-unknown-linux-gnu` | ubuntu-latest | standard `cargo build --release` |
+| `aarch64-unknown-linux-gnu` | ubuntu-latest | `cross` |
+| `x86_64-apple-darwin` | macos-latest | standard |
+| `aarch64-apple-darwin` | macos-latest | standard (Apple Silicon native) |
+| `x86_64-pc-windows-msvc` | windows-latest | standard — no vcpkg required |
 
 Output: 5 self-contained binaries attached to GitHub Release. No runtime dependencies.
 
@@ -461,16 +473,20 @@ chmod +x mcp-webgate
 The `webgate` crate exposes a high-level async API:
 
 ```rust
-use webgate::{Config, FetchResult, QueryResult};
+use webgate::{Config, FetchResult, QueryResult, CleanResult};
 
 // Load config from file + env
 let config = Config::load()?;
 
-// Single page fetch
+// Standalone HTML cleaning (no feature flags required)
+let result: CleanResult = webgate::clean(raw_html, 8000);
+println!("{}", result.text); // LLM-ready plain text
+
+// Single page fetch + clean
 let result: FetchResult = webgate::fetch("https://example.com", &config).await?;
 println!("{}", result.text);
 
-// Full search pipeline
+// Full search pipeline (requires `backends` feature)
 let result: QueryResult = webgate::query(
     &["rust async patterns", "tokio best practices"],
     &config,
@@ -483,6 +499,12 @@ for source in &result.sources {
 Return types mirror the Python JSON output:
 
 ```rust
+pub struct CleanResult {
+    pub text: String,
+    pub truncated: bool,
+    pub char_count: usize,
+}
+
 pub struct FetchResult {
     pub url: String,
     pub title: String,
@@ -496,7 +518,7 @@ pub struct QueryResult {
     pub sources: Vec<Source>,
     pub snippet_pool: Vec<SnippetEntry>,
     pub stats: Stats,
-    pub summary: Option<String>,          // when LLM summarization is enabled
+    pub summary: Option<String>,           // when `llm` feature + summarization enabled
     pub llm_summary_error: Option<String>, // on LLM failure
 }
 ```
@@ -507,18 +529,19 @@ pub struct QueryResult {
 
 ### M1 — Core library: fetch + clean (1 week)
 
-- [ ] Workspace setup (`Cargo.toml`, two crates)
+- [ ] Workspace setup: add `robot` crate, feature flags skeleton, shared version
 - [ ] `config.rs` — serde config with toml + env + clap
-- [ ] `scraper/cleaner.rs` — libxml2 HTML cleaning + text sterilization pipeline
+- [ ] `scraper/cleaner.rs` — html5ever/scraper HTML cleaning + text sterilization pipeline
 - [ ] `scraper/fetcher.rs` — reqwest concurrent fetcher with streaming cap, UA rotation, retry
 - [ ] `utils/url.rs` — sanitize, dedup, binary filter, domain filter
-- [ ] `lib.rs` — `webgate::fetch()` public API
+- [ ] `lib.rs` — `webgate::clean()` and `webgate::fetch()` public API
+- [ ] `robot` — `bump`, `promote`, `unpromote`, `publish` commands
 - [ ] Tests: cleaner (port from Python test suite), fetcher (mock server)
-- [ ] **Deliverable:** `webgate` crate compiles and passes tests
+- [ ] **Deliverable:** `webgate` crate compiles and passes tests; `robot` operational
 
 ### M2 — MCP server with fetch tool (3 days)
 
-- [ ] `main.rs` — MCP server with `webgate_fetch` tool via rmcp
+- [ ] `main.rs` — MCP server with `webgate_fetch` tool via `rmcp`
 - [ ] `webgate_onboarding` tool (static JSON)
 - [ ] CLI argument parsing with clap
 - [ ] Stdio transport working with Claude Code
@@ -544,7 +567,7 @@ pub struct QueryResult {
 - [ ] `llm/client.rs` — OpenAI-compatible async chat client
 - [ ] `llm/expander.rs` — query expansion
 - [ ] `llm/summarizer.rs` — Markdown summary with citations
-- [ ] LLM reranking in `reranker.rs`
+- [ ] LLM reranking in `reranker.rs` (behind `llm` feature flag)
 - [ ] Adaptive budget redistribution
 - [ ] Tests: LLM features with mock responses
 - [ ] **Deliverable:** Full feature parity with Python Phase 4
@@ -552,9 +575,9 @@ pub struct QueryResult {
 ### M5 — CI, release, publish (3 days)
 
 - [ ] GitHub Actions `ci.yml` — test on ubuntu/windows/macos
-- [ ] GitHub Actions `release.yml` — cross-compile 5 targets with static libxml2
+- [ ] GitHub Actions `release.yml` — cross-compile 5 targets (pure Rust, no C deps)
 - [ ] Publish `webgate` + `webgate-mcp` on crates.io
-- [ ] README with installation instructions
+- [ ] README with installation instructions + standalone cleaner usage examples
 - [ ] **Deliverable:** Prebuilt binaries on GitHub Releases, `cargo install webgate-mcp` works
 
 ### M6 — Zed extension (optional, 2 days)
@@ -582,17 +605,76 @@ pub struct QueryResult {
 
 ---
 
-## 11. Open questions
+## 11. `robot` — internal dev tool
 
-1. **MCP SDK choice:** `rmcp` is the most mature Rust MCP crate today. Monitor the official
-   Anthropic Rust SDK — if it ships before M2, evaluate switching.
+A small Rust binary in `crates/robot/` (workspace member, `publish = false`) that automates
+the release workflow. Built with `clap`.
 
-2. **libxml2 static linking on Windows:** `vcpkg` static triplet (`x64-windows-static-md`)
-   works but requires testing in CI. Fallback: ship Windows binary with `libxml2.dll` sidecar.
+### Commands
 
-3. **WASM target for `webgate` library:** If we want `wasm32-wasi` support (e.g., for
-   serverless runtimes), libxml2 bindings won't compile to WASM. Would need a pure-Rust
-   HTML parser fallback behind a feature flag. Out of scope for initial release.
+#### `robot bump [X.Y.Z]`
 
-4. **Feature flags:** Consider making LLM features optional via Cargo features
-   (`webgate = { features = ["llm"] }`) to reduce binary size for users who don't need them.
+Updates the workspace version and commits.
+
+1. Read current version from `[workspace.package] version` in root `Cargo.toml`.
+2. If `X.Y.Z` is provided, use it; otherwise increment the patch component (`Z+1`).
+   Starting version: `0.0.1`.
+3. Write the new version to root `Cargo.toml`.
+4. `git add Cargo.toml Cargo.lock CHANGELOG.md`
+5. `git commit -m "chore(release): bump to X.Y.Z"`
+
+> Claude always updates `CHANGELOG.md` before running `robot bump`.
+
+#### `robot promote`
+
+Validates, merges to `main`, tags, and returns to `dev`.
+
+1. `cargo build --release` — abort on failure.
+2. `cargo test` — abort on failure.
+3. Read version from workspace `Cargo.toml`.
+4. `git checkout main && git merge dev --no-ff -m "release: vX.Y.Z"`
+5. `git tag vX.Y.Z`
+6. `git push origin main --tags`
+7. `git checkout dev`
+
+#### `robot unpromote`
+
+Undoes the last promote (use immediately after a bad promote).
+
+1. Read the last tag from `git describe --tags --abbrev=0`.
+2. `git push origin :refs/tags/vX.Y.Z` — delete remote tag.
+3. `git tag -d vX.Y.Z` — delete local tag.
+4. `git checkout main && git reset --hard HEAD~1`
+5. `git push origin main --force-with-lease`
+6. `git checkout dev`
+
+#### `robot publish`
+
+Publishes both crates to crates.io. Use after `promote`, starting from M5.
+
+1. `cargo publish -p webgate`
+2. Wait for crates.io index propagation (~15 s).
+3. `cargo publish -p webgate-mcp`
+
+### Versioning
+
+All crates share a single version via `[workspace.package] version`. Individual crates
+declare `version.workspace = true`. A single `robot bump` call is sufficient.
+
+---
+
+## 12. Open questions
+
+1. **MCP SDK:** `rmcp` is the official Anthropic Rust SDK as of 2025. Use it from M2 onward.
+   Monitor for breaking changes on the 0.x series.
+
+2. **WASM target for `webgate` library:** With the switch to pure-Rust `scraper`/html5ever,
+   a `wasm32-wasi` build is now architecturally possible. Gated behind a feature flag
+   (`wasm`) and out of scope for initial release, but no longer blocked by C deps.
+
+3. **Feature flags:** `llm` feature is optional (see §3). Consider also making individual
+   backends opt-in for users who only need one search provider.
+
+4. **`webgate::clean()` as a standalone use case:** The cleaner is exposed as a first-class
+   public API (not just an internal step). This opens a secondary audience: any Rust project
+   doing HTML → LLM text conversion, independently of the MCP or search features.

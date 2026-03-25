@@ -1,4 +1,1 @@
-[env]
-VCPKG_ROOT = "L:\\Work\\lib\\vcpkg"
-VCPKGRS_DYNAMIC = "1"
-LIBCLANG_PATH = "L:\\Work\\lib\\LLVM\\bin"
+# No system package dependencies — pure Rust build.

@@ -7,16 +7,21 @@ authors.workspace = true
 repository.workspace = true
 description = "Denoised web search library — fetch, clean, and rerank web content for AI agents."
 
+[features]
+default = ["backends"]
+backends = []
+llm = []
+
 [dependencies]
 # Async runtime
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 
 # HTTP client (streaming support critical for size cap)
 reqwest = { version = "0.12", features = ["stream", "gzip", "brotli"] }
 futures = "0.3"
 
-# HTML parsing — libxml2 bindings (same engine as Python lxml)
-libxml = "0.3"
+# HTML parsing — pure Rust, no system deps
+scraper = "0.20"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -34,7 +39,7 @@ thiserror = "2"
 # Logging
 tracing = "0.1"
 
-# Async trait (for SearchBackend)
+# Async trait (for SearchBackend dyn dispatch)
 async-trait = "0.1"
 
 [dev-dependencies]
