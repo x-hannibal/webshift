@@ -233,6 +233,8 @@ fn cmd_promote() -> Result<(), Box<dyn std::error::Error>> {
     run_cmd("cargo", &["test"])?;
 
     println!("promote: merging dev → main, tagging {tag}…");
+    // cargo test can leave Cargo.lock with CRLF changes on Windows; discard them before switching branches
+    run_cmd("git", &["checkout", "--", "Cargo.lock"])?;
     run_cmd("git", &["checkout", "main"])?;
     run_cmd(
         "git",
