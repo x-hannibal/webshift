@@ -38,7 +38,7 @@ With LLM summarization:
       "command": "mcp-webshift",
       "args": [
         "--default-backend", "searxng",
-        "--llm-enabled",
+        "--llm-enabled", "true",
         "--llm-base-url", "http://localhost:11434/v1",
         "--llm-model", "gemma3:27b",
         "--llm-timeout", "60"

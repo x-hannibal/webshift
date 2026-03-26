@@ -1,0 +1,10 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.annibale-x/webshift",
+  "description": "Rust MCP server for denoised web search — fetch, clean, and rerank web content for AI agents.",
+  "repository": {
+    "url": "https://github.com/annibale-x/webshift",
+    "source": "github"
+  },
+  "version": "0.2.6"
+}

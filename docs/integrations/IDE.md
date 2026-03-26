@@ -19,7 +19,7 @@ cargo install --path crates/webshift-mcp
 You also need a [search backend](../../README.md#search-backends). The easiest option is SearXNG:
 
 ```bash
-docker run -d -p 4000:8080 searxng/searxng
+docker run -d -p 8080:8080 searxng/searxng
 ```
 
 No Docker? Use a cloud backend — see [Backends](../../README.md#search-backends) for Brave, Tavily, Exa, SerpAPI, Google, or Bing.
@@ -67,7 +67,7 @@ With LLM summarization (Ollama):
       "command": "mcp-webshift",
       "args": [
         "--default-backend", "searxng",
-        "--llm-enabled",
+        "--llm-enabled", "true",
         "--llm-base-url", "http://localhost:11434/v1",
         "--llm-model", "gemma3:27b",
         "--llm-timeout", "60"
@@ -124,8 +124,7 @@ Add to `~/.config/zed/settings.json`:
   "context_servers": {
     "webshift": {
       "command": "mcp-webshift",
-      "args": ["--default-backend", "searxng"],
-      // or env object 
+      "args": ["--default-backend", "searxng"]
     }
   }
 }
@@ -203,7 +202,7 @@ Running webshift in multiple IDEs simultaneously? Use CLI args — each instance
       "command": "mcp-webshift",
       "args": [
         "--default-backend", "searxng",
-        "--llm-enabled",
+        "--llm-enabled", "true",
         "--llm-model", "gemma3:27b",
         "--llm-timeout", "60"
       ]

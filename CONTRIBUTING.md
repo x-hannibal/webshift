@@ -74,8 +74,9 @@ cargo run -p robot -- bump 0.2.0    # explicit version
 
 What `bump` does:
 1. Updates `[workspace.package] version` in root `Cargo.toml`.
-2. Commits `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md` with message
-   `chore(release): bump to X.Y.Z`.
+2. Updates the "Latest Release" badge in `README.md`.
+3. Updates the `version` fields in `server.json` (MCP Registry manifest).
+4. Stages all tracked changes + commits with message `chore(release): bump to X.Y.Z`.
 
 All crates share the workspace version — a single bump covers everything.
 

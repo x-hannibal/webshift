@@ -42,32 +42,39 @@ webshift/                            # repo root
 ├── crates/
 │   ├── webshift/                    # library crate (crates.io: webshift)
 │   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs              # public API: fetch(), query(), clean(), Config
-│   │       ├── config.rs           # serde config (toml + env + CLI)
-│   │       ├── scraper/
-│   │       │   ├── mod.rs
-│   │       │   ├── fetcher.rs      # reqwest concurrent fetcher, streaming, UA rotation
-│   │       │   └── cleaner.rs      # scraper/html5ever HTML cleaning + regex text sterilization
-│   │       ├── backends/
-│   │       │   ├── mod.rs          # SearchBackend trait + SearchResult
-│   │       │   ├── searxng.rs
-│   │       │   ├── brave.rs
-│   │       │   ├── tavily.rs
-│   │       │   ├── exa.rs
-│   │       │   ├── serpapi.rs
-│   │       │   ├── google.rs       # Google Custom Search API
-│   │       │   ├── bing.rs         # Bing Web Search API
-│   │       │   └── http.rs         # generic configurable REST backend
-│   │       ├── llm/
-│   │       │   ├── mod.rs
-│   │       │   ├── client.rs       # OpenAI-compatible async client (reqwest)
-│   │       │   ├── expander.rs     # query expansion
-│   │       │   └── summarizer.rs   # Markdown report with citations
-│   │       └── utils/
-│   │           ├── mod.rs
-│   │           ├── url.rs          # sanitize, dedup, binary filter, domain filter
-│   │           └── reranker.rs     # BM25 deterministic + LLM reranking
+│   │   ├── src/
+│   │   │   ├── lib.rs              # public API: fetch(), query(), clean(), Config
+│   │   │   ├── config.rs           # serde config (toml + env + CLI)
+│   │   │   ├── scraper/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── fetcher.rs      # reqwest concurrent fetcher, streaming, UA rotation
+│   │   │   │   └── cleaner.rs      # scraper/html5ever HTML cleaning + regex text sterilization
+│   │   │   ├── backends/
+│   │   │   │   ├── mod.rs          # SearchBackend trait + SearchResult
+│   │   │   │   ├── searxng.rs
+│   │   │   │   ├── brave.rs
+│   │   │   │   ├── tavily.rs
+│   │   │   │   ├── exa.rs
+│   │   │   │   ├── serpapi.rs
+│   │   │   │   ├── google.rs       # Google Custom Search API
+│   │   │   │   ├── bing.rs         # Bing Web Search API
+│   │   │   │   └── http.rs         # generic configurable REST backend
+│   │   │   ├── llm/
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── client.rs       # OpenAI-compatible async client (reqwest)
+│   │   │   │   ├── expander.rs     # query expansion
+│   │   │   │   └── summarizer.rs   # Markdown report with citations
+│   │   │   └── utils/
+│   │   │       ├── mod.rs
+│   │   │       ├── url.rs          # sanitize, dedup, binary filter, domain filter
+│   │   │       └── reranker.rs     # BM25 deterministic + LLM reranking
+│   │   └── tests/                  # integration tests
+│   │       ├── common/
+│   │       │   └── mod.rs          # shared TestConfig + test.toml loader
+│   │       ├── test_cleaner.rs
+│   │       ├── test_fetcher.rs
+│   │       ├── test_backends.rs
+│   │       └── test_pipeline.rs
 │   │
 │   ├── webshift-mcp/                # binary crate (crates.io: webshift-mcp)
 │   │   ├── Cargo.toml
@@ -80,12 +87,6 @@ webshift/                            # repo root
 │       └── src/
 │           ├── main.rs             # bump, test, promote, unpromote, publish, harness
 │           └── harness.rs          # diagnostic runner (real services, verbose output)
-│
-├── tests/                          # integration tests
-│   ├── test_cleaner.rs
-│   ├── test_fetcher.rs
-│   ├── test_backends.rs
-│   └── test_pipeline.rs
 │
 └── .github/
     └── workflows/
@@ -131,7 +132,7 @@ The `webshift` library uses Cargo feature flags to keep the default footprint mi
 | Feature | Default | Enables |
 |---------|---------|---------|
 | `llm` | off | `llm/` module: query expansion, summarization, LLM reranking |
-| `backends` | on | All search backends (searxng, brave, tavily, exa, serpapi) |
+| `backends` | on | All search backends (searxng, brave, tavily, exa, serpapi, google, bing, http) |
 
 Users who want only the cleaner or the fetcher add:
 
@@ -533,7 +534,7 @@ pub struct QueryResult {
 
 **Dev environment:**
  - Ollama is available locally at `http://localhost:11434` with model `gemma3:27b` — use for LLM features (expander, summarizer, LLM reranker).
- - SearXNG is available locally at `https://localhost:4000` — use for backend integration tests.
+ - SearXNG is available locally at `http://localhost:8080` — use for backend integration tests.
 
 ### M1 — Core library: fetch + clean (1 week)
 
@@ -595,6 +596,7 @@ pub struct QueryResult {
 - [x] Publish `webshift` + `webshift-mcp` on crates.io
 - [x] README with installation instructions + standalone cleaner usage examples
 - [x] docs.rs: annotate feature-gated API with `#[cfg_attr(docsrs, doc(cfg(feature = "...")))]` on `llm` and `backends` modules
+- [x] `server.json` manifest + `release.yml` `publish-mcp` job → automatic publish to MCP Registry on every release tag
 - [x] **Deliverable:** `cargo install webshift-mcp` works, prebuilt binaries via GitHub Release on tag push
 
 ### M6 — Zed extension (optional, 2 days)
@@ -639,10 +641,11 @@ Updates the workspace version and commits.
 
 1. Read current version from `[workspace.package] version` in root `Cargo.toml`.
 2. If `X.Y.Z` is provided, use it; otherwise increment the patch component (`Z+1`).
-   Starting version: `0.0.1`.
 3. Write the new version to root `Cargo.toml`.
-4. `git add Cargo.toml Cargo.lock CHANGELOG.md`
-5. `git commit -m "chore(release): bump to X.Y.Z"`
+4. Update the "Latest Release" badge in `README.md`.
+5. Update the `version` fields in `server.json`.
+6. `git add -u` (all tracked changes) + `git add CHANGELOG.md Cargo.toml Cargo.lock README.md server.json`
+7. `git commit -m "chore(release): bump to X.Y.Z"`
 
 > Claude always updates `CHANGELOG.md` before running `robot bump`.
 
@@ -672,6 +675,7 @@ Undoes the last promote (use immediately after a bad promote).
 #### `robot publish`
 
 Publishes both crates to crates.io. Use after `promote`, starting from M5.
+MCP Registry publish happens automatically via the `publish-mcp` job in `release.yml` when the tag is pushed by `robot promote`.
 
 1. `cargo publish -p webshift`
 2. Wait for crates.io index propagation (~15 s).
@@ -709,6 +713,8 @@ declare `version.workspace = true`. A single `robot bump` call is sufficient.
 3. **Feature flags:** `llm` feature is optional (see §3). Consider also making individual
    backends opt-in for users who only need one search provider.
 
-4. **`webshift::clean()` as a standalone use case:** The cleaner is exposed as a first-class
+4. ~~**`webshift::clean()` as a standalone use case:** The cleaner is exposed as a first-class
    public API (not just an internal step). This opens a secondary audience: any Rust project
-   doing HTML → LLM text conversion, independently of the MCP or search features.
+   doing HTML → LLM text conversion, independently of the MCP or search features.~~
+   **Resolved:** `webshift::clean()` is implemented, documented in README with standalone usage
+   example, and published on crates.io.

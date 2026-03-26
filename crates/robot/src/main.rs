@@ -134,6 +134,19 @@ fn write_workspace_version(new_version: &str) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+fn update_server_json_version(
+    old_version: &str,
+    new_version: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = "server.json";
+    let content = std::fs::read_to_string(path)?;
+    let old = format!("\"{}\"", old_version);
+    let new = format!("\"{}\"", new_version);
+    let updated = content.replace(&old, &new);
+    std::fs::write(path, updated)?;
+    Ok(())
+}
+
 fn update_readme_version_badge(
     old_version: &str,
     new_version: &str,
@@ -200,10 +213,11 @@ fn cmd_bump(explicit: Option<String>) -> Result<(), Box<dyn std::error::Error>> 
     println!("bump: {} → {}", current, new_version);
     write_workspace_version(&new_version)?;
     update_readme_version_badge(&current, &new_version)?;
+    update_server_json_version(&current, &new_version)?;
 
-    // Stage all tracked changes + CHANGELOG + Cargo files + README
+    // Stage all tracked changes + CHANGELOG + Cargo files + README + server.json
     run_cmd("git", &["add", "-u"])?;
-    run_cmd("git", &["add", "CHANGELOG.md", "Cargo.toml", "Cargo.lock", "README.md"])?;
+    run_cmd("git", &["add", "CHANGELOG.md", "Cargo.toml", "Cargo.lock", "README.md", "server.json"])?;
     run_cmd(
         "git",
         &[

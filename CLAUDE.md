@@ -99,7 +99,7 @@ crates/
 
 | Feature | Default | Enables |
 |---------|---------|---------|
-| `backends` | on | All 5 search backends + query pipeline |
+| `backends` | on | All 8 search backends + query pipeline |
 | `llm` | off | LLM client, query expander, summarizer, LLM reranking |
 
 Minimal dependency (cleaner + fetcher only):
@@ -149,7 +149,7 @@ When completing tasks from PLAN.md milestones, check them off (`- [x]`) immediat
 
 ## Local services
 
-- **SearXNG** — running locally at `http://localhost:4000`. Use it for integration tests
+- **SearXNG** — default port is `http://localhost:8080`. Use it for integration tests
   in M3 (query pipeline development) and as the default backend during development.
 
 ## Commit convention

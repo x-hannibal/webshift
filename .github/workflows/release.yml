@@ -104,3 +104,26 @@ jobs:
         with:
           generate_release_notes: true
           files: artifacts/*
+
+  publish-mcp:
+    name: Publish to MCP Registry
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin mcp-publisher
+
+      - name: Publish to MCP Registry
+        run: |
+          mcp-publisher login github
+          mcp-publisher publish
+        env:
+          MCP_GITHUB_TOKEN: ${{ secrets.MCP_REGISTRY_TOKEN }}

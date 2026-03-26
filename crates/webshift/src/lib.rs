@@ -16,7 +16,7 @@
 //!
 //! Minimal dependency (cleaner + fetcher only):
 //! ```toml
-//! webshift = { version = "0.1", default-features = false }
+//! webshift = { version = "0.2", default-features = false }
 //! ```
 //!
 //! ## Use cases

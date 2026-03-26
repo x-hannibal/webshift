@@ -119,8 +119,8 @@ URL deduplication and the binary/domain filter run at this point.
 
 Each fetch:
 - Streams the response via `bytes_stream()` — **never buffers the full response**
-- Hard-stops at `max_download_mb` (default 2 MB) per page regardless of `Content-Length`
-- Respects `search_timeout` (default 10 s)
+- Hard-stops at `max_download_mb` (default 1 MB) per page regardless of `Content-Length`
+- Respects `search_timeout` (default 8 s)
 
 **Round 2 — gap fill** — if some Round 1 fetches fail (timeout, 404, bot-block),
 they are replaced with backup URLs from the reserve pool, fetched immediately.
@@ -347,16 +347,16 @@ llm summary:       5.2 KB   (99.1% reduction)  ← final Markdown report
 
 | Key | Default | Effect |
 |-----|---------|--------|
-| `server.max_total_results` | `5` | Hard cap on sources returned |
-| `server.max_query_budget` | `16000` | Total char budget across all sources |
+| `server.max_total_results` | `20` | Hard cap on sources returned |
+| `server.max_query_budget` | `32000` | Total char budget across all sources |
 | `server.max_result_length` | `8000` | Hard per-page char cap before budget math |
-| `server.max_download_mb` | `2` | Streaming cap per HTTP response |
-| `server.search_timeout` | `10` | Seconds per fetch |
+| `server.max_download_mb` | `1` | Streaming cap per HTTP response |
+| `server.search_timeout` | `8` | Seconds per fetch |
 | `server.language` | `"en"` | BCP-47 hint passed to all backends (empty = let backend decide) |
 | `server.oversampling_factor` | `2` | Oversampling multiplier for reserve pool |
 | `server.adaptive_budget` | `"auto"` | Budget allocation mode: `"auto"` / `"on"` / `"off"` (see Stage 6) |
 | `server.adaptive_budget_fetch_factor` | `3` | Fetch cap multiplier when adaptive is on |
-| `server.auto_recovery_fetch` | `true` | Gap-fill failed fetches from reserve pool |
+| `server.auto_recovery_fetch` | `false` | Gap-fill failed fetches from reserve pool |
 | `llm.expansion_enabled` | `true` | Multi-query expansion via LLM |
 | `llm.summarization_enabled` | `true` | Markdown report with citations |
 | `llm.llm_rerank_enabled` | `false` | LLM-assisted Tier-2 rerank |

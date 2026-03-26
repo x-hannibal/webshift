@@ -1,0 +1,20 @@
+{
+  "webshift": {
+    "command": "mcp-webshift",
+    "args": [
+      "--default-backend",
+      "searxng",
+      "--searxng-url",
+      "http://localhost:8080",
+      "--llm-enabled",
+      "true",
+      "--llm-base-url",
+      "http://localhost:11434/v1",
+      "--llm-model",
+      "gemma3:12b",
+      "--llm-timeout",
+      "30"
+    ],
+    "env": {}
+  }
+}

@@ -14,7 +14,7 @@ for API keys or send data to external services. Everything runs on your machine.
 
 ```bash
 # Start SearXNG
-docker run -d -p 4000:8080 searxng/searxng
+docker run -d -p 8080:8080 searxng/searxng
 ```
 
 ```toml
@@ -23,7 +23,7 @@ docker run -d -p 4000:8080 searxng/searxng
 default = "searxng"
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 ```
 
 **What you get:** raw search results with cleaned text. No summaries,
@@ -41,7 +41,7 @@ search itself.
 a model pulled.
 
 ```bash
-docker run -d -p 4000:8080 searxng/searxng
+docker run -d -p 8080:8080 searxng/searxng
 ollama pull gemma3:27b
 ```
 
@@ -56,7 +56,7 @@ language          = "en"
 default = "searxng"
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 
 [llm]
 enabled               = true
@@ -113,7 +113,7 @@ to choose the best backend for each query.
 default = "searxng"       # used when no backend is specified
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 
 [backends.brave]
 api_key = "BSA-xxxxxxxxxxxx"
@@ -153,7 +153,7 @@ max_search_queries = 2        # limit query expansion
 default = "searxng"
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 ```
 
 **What you get:** very compact results. 3 pages, 4000 characters total.
@@ -268,11 +268,11 @@ In your `claude_desktop_config.json` or equivalent:
       "command": "mcp-webshift",
       "args": [
         "--default-backend", "searxng",
-        "--llm-enabled",
+        "--llm-enabled", "true",
         "--llm-model", "gemma3:27b"
       ],
       "env": {
-        "WEBSHIFT_SEARXNG_URL": "http://localhost:4000"
+        "WEBSHIFT_SEARXNG_URL": "http://localhost:8080"
       }
     }
   }

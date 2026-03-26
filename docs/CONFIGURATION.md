@@ -301,14 +301,14 @@ mcp-webshift [OPTIONS]
 | `--debug` | Enable debug logging. |
 | `--trace` | Enable trace logging (very verbose). |
 | `--log-file <PATH>` | Write logs to a file. |
-| `--llm-enabled` | Enable LLM features. |
+| `--llm-enabled <BOOL>` | Enable LLM features. |
 | `--llm-base-url <URL>` | LLM API base URL. |
 | `--llm-api-key <KEY>` | LLM API key. |
 | `--llm-model <NAME>` | LLM model name. |
 | `--llm-timeout <SECS>` | LLM timeout in seconds. |
-| `--llm-expansion-enabled` | Enable query expansion. |
-| `--llm-summarization-enabled` | Enable summarization. |
-| `--llm-rerank-enabled` | Enable LLM reranking. |
+| `--llm-expansion-enabled <BOOL>` | Enable query expansion. |
+| `--llm-summarization-enabled <BOOL>` | Enable summarization. |
+| `--llm-rerank-enabled <BOOL>` | Enable LLM reranking. |
 | `--llm-max-summary-words <N>` | Max words in summary. |
 | `--llm-input-budget-factor <N>` | Input budget multiplier. |
 
@@ -317,7 +317,7 @@ mcp-webshift [OPTIONS]
 ```bash
 mcp-webshift \
   --default-backend brave \
-  --llm-enabled \
+  --llm-enabled true \
   --llm-model "gpt-4o-mini" \
   --llm-base-url "https://api.openai.com/v1" \
   --llm-api-key "sk-..."

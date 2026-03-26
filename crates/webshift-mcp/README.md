@@ -36,7 +36,7 @@ The binary is called `mcp-webshift`.
 The easiest option is [SearXNG](https://docs.searxng.org/) — free, self-hosted, no API key:
 
 ```bash
-docker run -d -p 4000:8080 searxng/searxng
+docker run -d -p 8080:8080 searxng/searxng
 ```
 
 No Docker? Use a cloud backend — see [Search backends](#search-backends).
@@ -104,7 +104,7 @@ adaptive_budget     = "auto"  # "auto" | "on" | "off"
 default = "searxng"
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 
 [backends.brave]
 api_key = "BSA-..."
@@ -142,7 +142,7 @@ For the full configuration reference (all TOML keys, env vars, CLI args) see [do
 ```bash
 mcp-webshift \
   --default-backend searxng \
-  --searxng-url http://localhost:4000 \
+  --searxng-url http://localhost:8080 \
   --brave-api-key BSA-xxx \
   --google-api-key xxx --google-cx xxx \
   --bing-api-key xxx \
@@ -155,7 +155,7 @@ mcp-webshift \
 
 ```bash
 WEBSHIFT_DEFAULT_BACKEND=searxng
-WEBSHIFT_SEARXNG_URL=http://localhost:4000
+WEBSHIFT_SEARXNG_URL=http://localhost:8080
 WEBSHIFT_BRAVE_API_KEY=BSA-xxx
 WEBSHIFT_LLM_ENABLED=true
 WEBSHIFT_LLM_BASE_URL=http://localhost:11434/v1
@@ -168,7 +168,7 @@ WEBSHIFT_LLM_MODEL=gemma3:27b
 
 | Backend | Auth | Notes |
 |---------|------|-------|
-| **SearXNG** | none | Self-hosted, free. Default: `http://localhost:4000` |
+| **SearXNG** | none | Self-hosted, free. Default: `http://localhost:8080` |
 | **Brave** | API key | Free tier. [brave.com/search/api](https://brave.com/search/api/) |
 | **Tavily** | API key | AI-oriented. [tavily.com](https://tavily.com/) |
 | **Exa** | API key | Neural search. [exa.ai](https://exa.ai/) |

@@ -69,7 +69,7 @@ impl Default for TestSearxng {
     fn default() -> Self {
         Self {
             enabled: false,
-            url: "http://localhost:4000".into(),
+            url: "http://localhost:8080".into(),
         }
     }
 }

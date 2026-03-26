@@ -1,10 +1,11 @@
 # WebShift
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
-[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.5-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.5)
+[![docs.rs](https://img.shields.io/docsrs/webshift)](https://docs.rs/webshift)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.6-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.6)
 [![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/annibale-x/webshift/issues)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
+<!--[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://modelcontextprotocol.io/specification/2025-11-25)-->
 
 ---
 
@@ -120,7 +121,7 @@ webshift = { version = "0.2", features = ["llm"] }
 The easiest option is [SearXNG](https://docs.searxng.org/) — free, self-hosted, no API key:
 
 ```bash
-docker run -d -p 4000:8080 searxng/searxng
+docker run -d -p 8080:8080 searxng/searxng
 ```
 
 No Docker? Use a cloud backend — see [Search backends](#search-backends).
@@ -157,7 +158,7 @@ For client-specific setup see [docs/integrations/](https://github.com/annibale-x
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `queries` | string or list | required | Search query or list of queries |
-| `num_results` | integer | 5 | Results per query |
+| `num_results_per_query` | integer | 5 | Results per query |
 | `lang` | string | none | Language filter (e.g. `"en"`) |
 | `backend` | string | config default | Override search backend |
 
@@ -189,7 +190,7 @@ adaptive_budget     = "auto"  # "auto" | "on" | "off" — budget allocation mode
 default = "searxng"
 
 [backends.searxng]
-url = "http://localhost:4000"
+url = "http://localhost:8080"
 
 [backends.brave]
 api_key = "BSA-..."
@@ -243,7 +244,7 @@ Ready-to-use config examples are in [Use Cases](https://github.com/annibale-x/we
 
 ```bash
 WEBSHIFT_DEFAULT_BACKEND=searxng
-WEBSHIFT_SEARXNG_URL=http://localhost:4000
+WEBSHIFT_SEARXNG_URL=http://localhost:8080
 WEBSHIFT_BRAVE_API_KEY=BSA-xxx
 WEBSHIFT_GOOGLE_API_KEY=xxx
 WEBSHIFT_GOOGLE_CX=xxx
@@ -259,7 +260,7 @@ WEBSHIFT_LLM_MODEL=gemma3:27b
 
 | Backend | Auth | Notes |
 |---------|------|-------|
-| **SearXNG** | none | Self-hosted, free. Default: `http://localhost:4000` |
+| **SearXNG** | none | Self-hosted, free. Default: `http://localhost:8080` |
 | **Brave** | API key | Free tier. [brave.com/search/api](https://brave.com/search/api/) |
 | **Tavily** | API key | AI-oriented. [tavily.com](https://tavily.com/) |
 | **Exa** | API key | Neural search. [exa.ai](https://exa.ai/) |
@@ -318,6 +319,7 @@ use webshift::{Config, clean, fetch, query};
 
 // Clean raw HTML
 let result = clean("<html><body><p>Hello world</p></body></html>", 8000);
+println!("{}", result.text);
 
 // Fetch and clean a single page
 let config = Config::default();
@@ -348,9 +350,6 @@ for source in &results.sources {
 
 ---
 
-<!-- RECENT_CHANGES_START -->
-<!-- RECENT_CHANGES_END -->
-
 ## Beta Status
 
 WebShift is in **beta**. Core functionality is stable and the server is used daily,
@@ -379,8 +378,8 @@ MIT License — see [LICENSE](https://github.com/annibale-x/webshift/blob/main/L
 ## Links
 
 - **[GitHub Repository](https://github.com/annibale-x/webshift)** — Source code and issues
-<!-- - **[docs.rs](https://docs.rs/webshift)** — API documentation -->
-<!-- - **[MCP Registry](https://registry.modelcontextprotocol.io/?q=webshift&all=1)** — WebShift on Model Context Protocol Registry -->
+- **[Docs.rs](https://docs.rs/webshift)** — API documentation 
+- **[MCP Registry](https://registry.modelcontextprotocol.io/?q=mcp-webshift&all=1)** — WebShift on Model Context Protocol Registry
 - **[MCP Protocol](https://modelcontextprotocol.io/specification/2025-11-25)** — Model Context Protocol specification
 
 ---

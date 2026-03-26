@@ -1,7 +1,6 @@
 //! MCP server entry point: tool registration and stdio transport.
 //!
-//! Registers two tools (M2): `webshift_onboarding`, `webshift_fetch`.
-//! `webshift_query` is added in M3 when the search pipeline is ready.
+//! Registers three tools: `webshift_onboarding`, `webshift_fetch`, `webshift_query`.
 //!
 //! Binary name: `mcp-webshift` (configured in Cargo.toml).
 

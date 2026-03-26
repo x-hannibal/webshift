@@ -11,6 +11,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.6] - 2026-03-26
+
+### Added
+
+- `server.json` MCP Registry manifest (`io.github.annibale-x/webshift`)
+- `release.yml` `publish-mcp` job: automatic publish to MCP Registry on every release tag via `mcp-publisher`
+- `robot bump` now updates `server.json` version alongside `Cargo.toml` and `README.md`
+- `docs.rs` badge added to README
+
+### Fixed
+
+- `tests/common/mod.rs` and `robot/src/harness.rs`: hardcoded SearXNG default URL changed from `localhost:4000` to `localhost:8080` to match production `config.rs` default
+- `lib.rs` crate-level docstring: version example updated from `"0.1"` to `"0.2"`
+- `webshift-mcp/main.rs` module comment: updated from "M2, 2 tools" to reflect all three registered tools
+- `docs/UNDER_THE_HOOD.md` configuration reference table: corrected five wrong default values (`max_total_results` 5→20, `max_query_budget` 16000→32000, `max_download_mb` 2→1, `search_timeout` 10→8, `auto_recovery_fetch` true→false)
+- `README.md`: `webshift_query` parameter name corrected from `num_results` to `num_results_per_query`
+- `docs/integrations/IDE.md`, `AGENT.md`, `USE_CASES.md`, `CONFIGURATION.md`: `--llm-enabled` and related boolean flags now shown with explicit `true` value (required by clap `Option<bool>`)
+- `docs/integrations/IDE.md`: removed invalid JS comment `// or env object` from JSON block
+- `CHANGELOG.md`: added all missing diff links from `[0.1.9]` to `[0.2.5]`; `[Unreleased]` now points to `v0.2.5...HEAD`
+- `PLAN.md`: corrected `https://localhost:4000` typo to `http://localhost:8080`; updated workspace layout, feature flag table (5→8 backends), and `robot bump` description
+- `CLAUDE.md`: feature flag table updated from 5 to 8 backends
+- `CONTRIBUTING.md`: `robot bump` description updated to include README badge and `server.json` updates
+
+---
+
 ## [0.2.5] - 2026-03-26
 
 ### Fixed
@@ -300,7 +325,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release profile with LTO, strip, and size optimization
 - `CLAUDE.md`, `CONTRIBUTING.md`, `PLAN.md`
 
-[Unreleased]: https://github.com/annibale-x/webshift/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/annibale-x/webshift/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/annibale-x/webshift/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/annibale-x/webshift/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/annibale-x/webshift/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/annibale-x/webshift/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/annibale-x/webshift/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/annibale-x/webshift/compare/v0.1.12...v0.2.0
+[0.1.12]: https://github.com/annibale-x/webshift/compare/v0.1.11...v0.1.12
+[0.1.11]: https://github.com/annibale-x/webshift/compare/v0.1.10...v0.1.11
+[0.1.10]: https://github.com/annibale-x/webshift/compare/v0.1.9...v0.1.10
+[0.1.9]: https://github.com/annibale-x/webshift/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/annibale-x/webshift/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/annibale-x/webshift/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/annibale-x/webshift/compare/v0.1.5...v0.1.6
