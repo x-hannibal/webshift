@@ -1,0 +1,1 @@
+L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\mcp_webshift_zed.wasm: L:\Work\rs-webgate\integrations\zed\assets\default_settings.json L:\Work\rs-webgate\integrations\zed\assets\settings_schema.json L:\Work\rs-webgate\integrations\zed\src\lib.rs

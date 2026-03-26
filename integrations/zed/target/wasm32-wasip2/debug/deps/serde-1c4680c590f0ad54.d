@@ -1,0 +1,14 @@
+L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\deps\serde-1c4680c590f0ad54.d: C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\build\serde-f2c565752d13a796\out/private.rs
+
+L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\deps\libserde-1c4680c590f0ad54.rlib: C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\build\serde-f2c565752d13a796\out/private.rs
+
+L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\deps\libserde-1c4680c590f0ad54.rmeta: C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\build\serde-f2c565752d13a796\out/private.rs
+
+C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\Hannibal\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+L:\Work\rs-webgate\integrations\zed\target\wasm32-wasip2\debug\build\serde-f2c565752d13a796\out/private.rs:
+
+# env-dep:OUT_DIR=L:\\Work\\rs-webgate\\integrations\\zed\\target\\wasm32-wasip2\\debug\\build\\serde-f2c565752d13a796\\out
