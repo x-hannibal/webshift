@@ -1,4 +1,43 @@
 {
+  // Backend settings
   "--default-backend": "searxng",
-  "--searxng-url": "http://localhost:8080"
+  "--searxng-url": "http://localhost:8080",
+
+  // Fetch settings
+  "--max-download-mb": 1,
+  "--max-result-length": 8000,
+  "--search-timeout": 8,
+  "--oversampling-factor": 2,
+  "--auto-recovery-fetch": false,
+  "--max-total-results": 20,
+  "--max-query-budget": 32000,
+  "--max-search-queries": 5,
+  "--results-per-query": 5,
+  "--blocked-domains": "",
+  "--allowed-domains": "",
+  "--adaptive-budget": "auto",
+  "--adaptive-budget-fetch-factor": 3,
+  "--language": "en",
+
+  // Backend credentials
+  "--brave-api-key": "",
+  "--tavily-api-key": "",
+  "--exa-api-key": "",
+  "--serpapi-api-key": "",
+  "--google-api-key": "",
+  "--google-cx": "",
+  "--bing-api-key": "",
+  "--bing-market": "en-US",
+
+  // LLM settings
+  "--llm-enabled": false,
+  "--llm-base-url": "http://localhost:11434/v1",
+  "--llm-api-key": "",
+  "--llm-model": "gemma3:27b",
+  "--llm-timeout": 30,
+  "--llm-expansion-enabled": false,
+  "--llm-summarization-enabled": false,
+  "--llm-rerank-enabled": false,
+  "--llm-max-summary-words": 0,
+  "--llm-input-budget-factor": 3
 }
