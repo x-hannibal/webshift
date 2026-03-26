@@ -345,7 +345,8 @@ for source in &results.sources {
 
 | Platform | Guide |
 |----------|-------|
-| Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code | [IDE Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/IDE.md) |
+| Claude Desktop, Claude Code, Cursor, Windsurf, VS Code | [IDE Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/IDE.md) |
+| **Zed** — native extension with auto-download and Configure Server modal | [Zed Extension](https://github.com/annibale-x/webshift/blob/main/docs/integrations/ZED_EXTENSION.md) |
 | Gemini CLI, Claude CLI, custom agents | [Agent Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/AGENT.md) |
 
 ---

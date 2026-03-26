@@ -1,0 +1,153 @@
+{
+  "type": "object",
+  "properties": {
+    "default_backend": {
+      "type": "string",
+      "description": "Default search backend: searxng | brave | tavily | exa | serpapi | google | bing | http"
+    },
+    "max_download_mb": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Streaming download cap per page in megabytes (default: 1)"
+    },
+    "max_result_length": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Hard character cap per cleaned page (default: 8000)"
+    },
+    "search_timeout": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Per-request timeout in seconds for fetch and search calls (default: 8)"
+    },
+    "oversampling_factor": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Oversample multiplier: fetch results_per_query × factor candidates (default: 2)"
+    },
+    "auto_recovery_fetch": {
+      "type": "boolean",
+      "description": "Replace failed fetches with reserve-pool pages (default: false)"
+    },
+    "max_total_results": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Hard cap on total results returned per query call (default: 20)"
+    },
+    "max_query_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total character budget across all sources in a single query (default: 32000)"
+    },
+    "max_search_queries": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of search queries per call, including LLM expansions (default: 5)"
+    },
+    "results_per_query": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Results requested per backend query (default: 5)"
+    },
+    "blocked_domains": {
+      "type": "string",
+      "description": "Comma-separated domain blocklist, e.g. spam.com,ads.net"
+    },
+    "allowed_domains": {
+      "type": "string",
+      "description": "Comma-separated domain allowlist — when set, only these domains pass"
+    },
+    "adaptive_budget": {
+      "type": "string",
+      "description": "Proportional budget allocation after BM25 reranking: auto | on | off (default: auto)"
+    },
+    "adaptive_budget_fetch_factor": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Fetch factor for adaptive budget: max_result_length × factor before trimming (default: 3)"
+    },
+    "language": {
+      "type": "string",
+      "description": "Default language tag passed to search backends, e.g. en, it, all"
+    },
+    "searxng_url": {
+      "type": "string",
+      "description": "SearXNG instance URL (e.g. http://localhost:8080)"
+    },
+    "brave_api_key": {
+      "type": "string",
+      "description": "Brave Search API key"
+    },
+    "tavily_api_key": {
+      "type": "string",
+      "description": "Tavily API key"
+    },
+    "exa_api_key": {
+      "type": "string",
+      "description": "Exa API key"
+    },
+    "serpapi_api_key": {
+      "type": "string",
+      "description": "SerpAPI key"
+    },
+    "google_api_key": {
+      "type": "string",
+      "description": "Google Custom Search API key"
+    },
+    "google_cx": {
+      "type": "string",
+      "description": "Google Custom Search Engine ID"
+    },
+    "bing_api_key": {
+      "type": "string",
+      "description": "Bing Web Search API key"
+    },
+    "bing_market": {
+      "type": "string",
+      "description": "Bing market code, e.g. en-US, it-IT"
+    },
+    "llm_enabled": {
+      "type": "boolean",
+      "description": "Enable LLM features (default: false)"
+    },
+    "llm_base_url": {
+      "type": "string",
+      "description": "OpenAI-compatible API base URL (e.g. http://localhost:11434/v1 for Ollama)"
+    },
+    "llm_api_key": {
+      "type": "string",
+      "description": "LLM API key (leave empty for local servers such as Ollama)"
+    },
+    "llm_model": {
+      "type": "string",
+      "description": "LLM model name, e.g. gemma3:27b, gpt-4o"
+    },
+    "llm_timeout": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "LLM request timeout in seconds (default: 30)"
+    },
+    "llm_expansion_enabled": {
+      "type": "boolean",
+      "description": "Auto-expand single queries into complementary variants via LLM (default: false)"
+    },
+    "llm_summarization_enabled": {
+      "type": "boolean",
+      "description": "Include a Markdown summary with citations in query output (default: false)"
+    },
+    "llm_rerank_enabled": {
+      "type": "boolean",
+      "description": "LLM-assisted reranking, BM25 always active (default: false)"
+    },
+    "llm_max_summary_words": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Max words in the LLM summary (0 = derived automatically from budget)"
+    },
+    "llm_input_budget_factor": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "LLM input budget multiplier: max_query_budget × factor (default: 3)"
+    }
+  }
+}

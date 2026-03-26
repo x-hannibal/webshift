@@ -117,20 +117,32 @@ claude mcp add webshift -- mcp-webshift --default-backend searxng
 
 ## Zed Editor
 
-Add to `~/.config/zed/settings.json`:
+### Option A — Extension (recommended)
+
+Install the **mcp-webshift** extension from the Zed extension marketplace.
+The extension downloads the native binary automatically and exposes all settings
+through a **Configure Server** modal — no manual file editing required.
+
+Full guide: [Zed Extension](./ZED_EXTENSION.md)
+
+### Option B — Manual config
+
+If you prefer direct control, add to `~/.config/zed/settings.json`:
 
 ```json
 {
   "context_servers": {
-    "webshift": {
-      "command": "mcp-webshift",
-      "args": ["--default-backend", "searxng"]
+    "mcp-webshift": {
+      "command": {
+        "path": "mcp-webshift",
+        "args": ["--default-backend", "searxng"]
+      }
     }
   }
 }
 ```
 
-> Zed uses `"context_servers"` (not `"mcpServers"`).
+The binary must be on your PATH (`cargo install webshift-mcp`).
 
 ---
 
@@ -225,7 +237,8 @@ Full reference: `mcp-webshift --help`
 | Claude Desktop (Linux) | `~/.config/Claude/claude_desktop_config.json` |
 | Claude Desktop (Windows) | `%APPDATA%\Claude\claude_desktop_config.json` |
 | Claude Code | `.mcp.json` in project root (or `~/.mcp.json` global) |
-| Zed | `~/.config/zed/settings.json` |
+| Zed (extension) | Zed Extension marketplace + Configure Server modal |
+| Zed (manual) | `~/.config/zed/settings.json` |
 | Cursor (project) | `.cursor/mcp.json` |
 | Cursor (global) | `~/.cursor/mcp.json` |
 | Windsurf (macOS/Linux) | `~/.codeium/windsurf/mcp_config.json` |
