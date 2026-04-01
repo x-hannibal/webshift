@@ -1589,7 +1589,7 @@ dependencies = [
 
 [[package]]
 name = "robot"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "clap",
  "serde",
@@ -2410,7 +2410,7 @@ dependencies = [
 
 [[package]]
 name = "webshift"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "async-trait",
  "dirs-next",
@@ -2431,7 +2431,7 @@ dependencies = [
 
 [[package]]
 name = "webshift-mcp"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "clap",
  "rmcp",

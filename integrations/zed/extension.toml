@@ -4,7 +4,7 @@ description = "Denoised web search MCP context server — native binary, zero ru
 version = "0.1.0"
 schema_version = 1
 authors = ["Annibale X"]
-repository = "https://github.com/annibale-x/webshift"
+repository = "https://github.com/x-monk/webshift"
 
 [context_servers.mcp-webshift]
 name = "mcp-webshift"

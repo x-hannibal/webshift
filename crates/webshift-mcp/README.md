@@ -1,9 +1,9 @@
 # webshift-mcp
 
 [![Crates.io](https://img.shields.io/crates/v/webshift-mcp.svg)](https://crates.io/crates/webshift-mcp)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/x-monk/webshift/blob/main/LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://spec.modelcontextprotocol.io/)
-[![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/annibale-x/webshift/issues)
+[![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/x-monk/webshift/issues)
 
 **Denoised web search MCP server — single static binary, zero runtime dependencies.**
 
@@ -56,7 +56,7 @@ No Docker? Use a cloud backend — see [Search backends](#search-backends).
 
 That's it. Your AI agent now has web search with clean, budget-controlled text output.
 
-For client-specific setup (Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code, Gemini CLI) see [docs/integrations/](https://github.com/annibale-x/webshift/tree/main/docs/integrations).
+For client-specific setup (Claude Desktop, Claude Code, Zed, Cursor, Windsurf, VS Code, Gemini CLI) see [docs/integrations/](https://github.com/x-monk/webshift/tree/main/docs/integrations).
 
 ---
 
@@ -135,7 +135,7 @@ expansion_enabled     = true
 summarization_enabled = true
 ```
 
-For the full configuration reference (all TOML keys, env vars, CLI args) see [docs/CONFIGURATION.md](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md).
+For the full configuration reference (all TOML keys, env vars, CLI args) see [docs/CONFIGURATION.md](https://github.com/x-monk/webshift/blob/main/docs/CONFIGURATION.md).
 
 ### Key CLI args
 
@@ -215,13 +215,13 @@ Always active:
 
 ## Links
 
-- **[GitHub Repository](https://github.com/annibale-x/webshift)** — Source code and issues
+- **[GitHub Repository](https://github.com/x-monk/webshift)** — Source code and issues
 - **[webshift library](https://crates.io/crates/webshift)** — Rust library crate
-- **[Configuration Reference](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md)**
-- **[Use Cases & Examples](https://github.com/annibale-x/webshift/blob/main/docs/USE_CASES.md)**
-- **[IDE & Agent Integration Guides](https://github.com/annibale-x/webshift/tree/main/docs/integrations)**
+- **[Configuration Reference](https://github.com/x-monk/webshift/blob/main/docs/CONFIGURATION.md)**
+- **[Use Cases & Examples](https://github.com/x-monk/webshift/blob/main/docs/USE_CASES.md)**
+- **[IDE & Agent Integration Guides](https://github.com/x-monk/webshift/tree/main/docs/integrations)**
 - **[MCP Protocol](https://modelcontextprotocol.io/specification/2025-11-25)**
 
 ## License
 
-MIT License — see [LICENSE](https://github.com/annibale-x/webshift/blob/main/LICENSE) for details.
+MIT License — see [LICENSE](https://github.com/x-monk/webshift/blob/main/LICENSE) for details.

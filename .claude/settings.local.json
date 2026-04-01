@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Read(//l/Work/mcp-webgate/src/mcp_webgate/**)",
+      "Bash(cargo test:*)",
+      "mcp__mcp-serena__onboarding",
+      "mcp__mcp-serena__activate_project",
+      "mcp__mcp-serena__write_memory",
+      "mcp__mcp-serena__list_dir",
+      "mcp__claude_ai_Context7__resolve-library-id",
+      "mcp__claude_ai_Context7__query-docs",
+      "Bash(cargo search:*)",
+      "mcp__mcp-serena__check_onboarding_performed",
+      "mcp__mcp-server-github__pull_request_read",
+      "mcp__mcp-server-github__create_pull_request"
+    ]
+  }
+}

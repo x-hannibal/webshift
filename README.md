@@ -2,9 +2,9 @@
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![docs.rs](https://img.shields.io/docsrs/webshift)](https://docs.rs/webshift)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.8-purple.svg)](https://github.com/annibale-x/webshift/releases/tag/v0.2.8)
-[![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/annibale-x/webshift/issues)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/annibale-x/webshift/blob/main/LICENSE)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.8-purple.svg)](https://github.com/x-monk/webshift/releases/tag/v0.2.8)
+[![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/x-monk/webshift/issues)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/x-monk/webshift/blob/main/LICENSE)
 <!--[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://modelcontextprotocol.io/specification/2025-11-25)-->
 
 ---
@@ -79,7 +79,7 @@ Question
   +- Structured JSON output
 ```
 
-For a detailed explanation of each pipeline stage, BM25 parameters, adaptive budget allocation, and real compression metrics see [Under the Hood](https://github.com/annibale-x/webshift/blob/main/docs/UNDER_THE_HOOD.md). For the full configuration reference (TOML, env vars, CLI args) see [Configuration](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md). For ready-to-use examples see [Use Cases](https://github.com/annibale-x/webshift/blob/main/docs/USE_CASES.md).
+For a detailed explanation of each pipeline stage, BM25 parameters, adaptive budget allocation, and real compression metrics see [Under the Hood](https://github.com/x-monk/webshift/blob/main/docs/UNDER_THE_HOOD.md). For the full configuration reference (TOML, env vars, CLI args) see [Configuration](https://github.com/x-monk/webshift/blob/main/docs/CONFIGURATION.md). For ready-to-use examples see [Use Cases](https://github.com/x-monk/webshift/blob/main/docs/USE_CASES.md).
 
 ---
 
@@ -141,7 +141,7 @@ No Docker? Use a cloud backend — see [Search backends](#search-backends).
 
 That's it. The agent now has `webshift_query`, `webshift_fetch`, and `webshift_onboarding`.
 
-For client-specific setup see [docs/integrations/](https://github.com/annibale-x/webshift/tree/main/docs/integrations).
+For client-specific setup see [docs/integrations/](https://github.com/x-monk/webshift/tree/main/docs/integrations).
 
 ---
 
@@ -237,8 +237,8 @@ llm_rerank_enabled    = false
 ```
 
 For every setting with all three config methods (TOML, env vars, CLI args)
-and plain-language descriptions, see the full [Configuration Reference](https://github.com/annibale-x/webshift/blob/main/docs/CONFIGURATION.md).
-Ready-to-use config examples are in [Use Cases](https://github.com/annibale-x/webshift/blob/main/docs/USE_CASES.md) and [`examples/`](https://github.com/annibale-x/webshift/tree/main/examples).
+and plain-language descriptions, see the full [Configuration Reference](https://github.com/x-monk/webshift/blob/main/docs/CONFIGURATION.md).
+Ready-to-use config examples are in [Use Cases](https://github.com/x-monk/webshift/blob/main/docs/USE_CASES.md) and [`examples/`](https://github.com/x-monk/webshift/tree/main/examples).
 
 ### Key environment variables
 
@@ -345,9 +345,9 @@ for source in &results.sources {
 
 | Platform | Guide |
 |----------|-------|
-| Claude Desktop, Claude Code, Cursor, Windsurf, VS Code | [IDE Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/IDE.md) |
-| **Zed** — native extension with auto-download and Configure Server modal | [Zed Extension](https://github.com/annibale-x/webshift/blob/main/docs/integrations/ZED_EXTENSION.md) |
-| Gemini CLI, Claude CLI, custom agents | [Agent Integration](https://github.com/annibale-x/webshift/blob/main/docs/integrations/AGENT.md) |
+| Claude Desktop, Claude Code, Cursor, Windsurf, VS Code | [IDE Integration](https://github.com/x-monk/webshift/blob/main/docs/integrations/IDE.md) |
+| **Zed** — native extension with auto-download and Configure Server modal | [Zed Extension](https://github.com/x-monk/webshift/blob/main/docs/integrations/ZED_EXTENSION.md) |
+| Gemini CLI, Claude CLI, custom agents | [Agent Integration](https://github.com/x-monk/webshift/blob/main/docs/integrations/AGENT.md) |
 
 ---
 
@@ -359,13 +359,13 @@ but the API surface may still change before 1.0.
 **Feedback is very welcome.** If something doesn't work as expected, behaves oddly,
 or you have a use case that isn't covered:
 
-> [Open an issue on GitHub](https://github.com/annibale-x/webshift/issues)
+> [Open an issue on GitHub](https://github.com/x-monk/webshift/issues)
 
 Bug reports, configuration questions, and feature requests all help shape the roadmap.
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](https://github.com/annibale-x/webshift/blob/main/CONTRIBUTING.md) for detailed guidelines on:
+Contributions are welcome! Please see [CONTRIBUTING.md](https://github.com/x-monk/webshift/blob/main/CONTRIBUTING.md) for detailed guidelines on:
 - Development setup and workflow
 - Code style and conventions
 - Testing requirements
@@ -374,17 +374,17 @@ Contributions are welcome! Please see [CONTRIBUTING.md](https://github.com/annib
 
 ## License
 
-MIT License — see [LICENSE](https://github.com/annibale-x/webshift/blob/main/LICENSE) for details.
+MIT License — see [LICENSE](https://github.com/x-monk/webshift/blob/main/LICENSE) for details.
 
 ## Links
 
-- **[GitHub Repository](https://github.com/annibale-x/webshift)** — Source code and issues
+- **[GitHub Repository](https://github.com/x-monk/webshift)** — Source code and issues
 - **[Docs.rs](https://docs.rs/webshift)** — API documentation 
 - **[MCP Registry](https://registry.modelcontextprotocol.io/?q=mcp-webshift&all=1)** — WebShift on Model Context Protocol Registry
 - **[MCP Protocol](https://modelcontextprotocol.io/specification/2025-11-25)** — Model Context Protocol specification
 
 ---
 
-**Need help?** Check the [documentation](https://github.com/annibale-x/webshift/tree/main/docs) or open an [issue](https://github.com/annibale-x/webshift/issues) on GitHub.
+**Need help?** Check the [documentation](https://github.com/x-monk/webshift/tree/main/docs) or open an [issue](https://github.com/x-monk/webshift/issues) on GitHub.
 
-<!-- mcp-name: io.github.annibale-x/mcp-webshift -->
+<!-- mcp-name: io.github.x-monk/mcp-webshift -->
