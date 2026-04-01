@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![docs.rs](https://img.shields.io/docsrs/webshift)](https://docs.rs/webshift)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.8-purple.svg)](https://github.com/x-monk/webshift/releases/tag/v0.2.8)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.9-purple.svg)](https://github.com/x-monk/webshift/releases/tag/v0.2.9)
 [![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/x-monk/webshift/issues)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/x-monk/webshift/blob/main/LICENSE)
 <!--[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://modelcontextprotocol.io/specification/2025-11-25)-->
