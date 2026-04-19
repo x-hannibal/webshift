@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.12] - 2026-04-20
+
+### Fixed
+
+- `clean(html, 0)` was truncating output to zero characters; `max_result_length = 0` (and `max_chars = 0` in `apply_window` / `process_page`) now means no truncation
+
+### Added
+
+- `apply_window`: inline doc note that `max_chars = 0` disables the cap
+- `process_page`: inline doc note that `max_chars = 0` disables the cap
+- `ServerConfig::max_result_length`: doc note "Set to `0` to disable the cap entirely"
+- `FetchResult::truncated`: doc note "Always `false` when `max_result_length` is `0`"
+- `docs/CONFIGURATION.md`: table entry for `max_result_length` documents `0 = no cap`
+- `docs/UNDER_THE_HOOD.md`: formula note and parameter table updated with `0 = no cap`
+- `README.md`: `clean(..., 0)` usage example added to library usage section
+
+---
+
 ## [0.2.11] - 2026-04-19
 
 ### Added

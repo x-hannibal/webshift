@@ -85,7 +85,8 @@ pub struct Config {
 pub struct ServerConfig {
     /// Streaming download cap per page in megabytes (default: 1).
     pub max_download_mb: u32,
-    /// Hard character cap per cleaned page (default: 8000).
+    /// Hard character cap per cleaned page (default: 8000). Set to `0` to
+    /// disable the cap entirely (no truncation).
     pub max_result_length: usize,
     /// Per-request timeout in seconds for fetch and search calls (default: 8).
     pub search_timeout: u64,

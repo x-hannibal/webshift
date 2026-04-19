@@ -3,7 +3,7 @@ members = ["crates/webshift", "crates/webshift-mcp", "crates/robot"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.11"
+version = "0.2.12"
 edition = "2024"
 license = "MIT"
 authors = ["Hannibal <annibale.x@gmail.com>"]
