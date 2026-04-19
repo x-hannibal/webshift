@@ -11,6 +11,14 @@ use std::sync::LazyLock;
 // Static noise tag set — same elements as Python _NOISE_XPATH
 // ---------------------------------------------------------------------------
 
+/// CSS selector for the lol_html streaming rewriter (text-map feature).
+/// Extends the NOISE_TAGS set with `head` so that `<title>` and other head
+/// metadata are not counted as content text nodes.
+#[cfg(feature = "text-map")]
+pub(crate) const TEXT_MAP_NOISE_SELECTOR: &str =
+    "script, style, nav, footer, header, aside, form, iframe, noscript, svg, \
+     button, input, select, textarea, head";
+
 static NOISE_TAGS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
         "script", "style", "nav", "footer", "header", "aside", "form",
@@ -137,6 +145,45 @@ pub fn clean_html(raw: &str) -> String {
         }
     }
     parts.join(" ")
+}
+
+/// Extract text nodes from HTML, skipping noise elements.
+///
+/// Returns `(nodes, title)`. Each node has a sequential 0-based ID in DOM
+/// traversal order, assigned only to non-noise, non-empty text nodes.
+/// Traversal order and noise-skip logic are identical to `replace_text_nodes`
+/// so that node IDs match across the round-trip.
+#[cfg(feature = "text-map")]
+pub fn extract_text_nodes(raw: &str) -> (Vec<crate::TextNode>, String) {
+    if raw.is_empty() {
+        return (Vec::new(), String::new());
+    }
+    let doc = Html::parse_document(raw);
+    let mut nodes: Vec<crate::TextNode> = Vec::new();
+    let mut counter = 0usize;
+
+    for node in doc.tree.nodes() {
+        if let scraper::node::Node::Text(text) = node.value() {
+            let t: &str = text;
+            let t = t.trim();
+            if t.is_empty() {
+                continue;
+            }
+            let in_noise = node
+                .ancestors()
+                .filter_map(ElementRef::wrap)
+                .any(|el| {
+                    let name = el.value().name();
+                    NOISE_TAGS.contains(name) || name == "head"
+                });
+            if !in_noise {
+                nodes.push(crate::TextNode { id: counter, text: t.to_string() });
+                counter += 1;
+            }
+        }
+    }
+    let title = extract_title(raw);
+    (nodes, title)
 }
 
 // ---------------------------------------------------------------------------

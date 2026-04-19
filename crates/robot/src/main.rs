@@ -33,7 +33,7 @@ enum Cmd {
         /// Explicit version to set (e.g. 0.2.0). Omit to increment Z.
         version: Option<String>,
     },
-    /// Run the full test suite (cargo test --workspace).
+    /// Run the full test suite (cargo test --workspace + text-map feature tests).
     Test,
     /// build + test + merge dev→main + tag + push + checkout dev.
     Promote,
@@ -234,6 +234,9 @@ fn cmd_bump(explicit: Option<String>) -> Result<(), Box<dyn std::error::Error>> 
 fn cmd_test() -> Result<(), Box<dyn std::error::Error>> {
     println!("test: running full test suite…");
     run_cmd("cargo", &["test", "--workspace"])?;
+    println!("test: running text-map feature tests…");
+    run_cmd("cargo", &["test", "-p", "webshift", "--features", "text-map", "--lib", "scraper::textmap"])?;
+    run_cmd("cargo", &["test", "-p", "webshift", "--features", "text-map", "--test", "integration_textmap"])?;
     println!("all tests passed ✓");
     Ok(())
 }

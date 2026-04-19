@@ -343,6 +343,79 @@ llm summary:       5.2 KB   (99.1% reduction)  ← final Markdown report
 
 ---
 
+## Text-map: DOM round-trip for content rewriting
+
+> Requires the `text-map` feature flag.
+
+The query pipeline (Stages 0–8) is designed for **read-only** consumption: HTML goes
+in, clean text comes out, the original markup is discarded. But some use cases need
+to **modify text inside HTML** while preserving the original structure — translate an
+email without breaking the layout, simplify the language of a web page, rewrite product
+descriptions in bulk.
+
+Passing raw HTML to an LLM and asking it to "only change the text" is fragile. Models
+can corrupt attributes, translate strings inside `href`, break inline styles, or
+mangle tag nesting — especially smaller models running locally.
+
+Text-map solves this with a two-step round-trip:
+
+```
+         extract_text_nodes(html)                replace_text_nodes(html, replacements)
+                  │                                           │
+    HTML ────────►│──► TextMap                   HTML ────────►│──► Modified HTML
+                  │    [ (0, "Hello")                         │    (only text changed,
+                  │      (1, "Welcome to...")                  │     structure intact)
+                  │      (2, "Click here") ]                  │
+                  │           │                                │
+                  │     your code / LLM                       │
+                  │     translates, rewrites,                  │
+                  │     simplifies, etc.                       │
+                  │           │                                │
+                  │     [(0, "Ciao")              ────────────►│
+                  │      (1, "Benvenuto a...")                 │
+                  │      (2, "Clicca qui")]                    │
+```
+
+### Extraction
+
+`extract_text_nodes()` walks the DOM using the same `scraper`/html5ever parser and
+noise-tag filter as `clean_html()`. Instead of joining all text into one string, it
+returns a `TextMap` — an ordered list of `TextNode { id, text }` entries. Each node
+has a sequential ID (0-based) following DOM traversal order.
+
+Text nodes inside noise elements (`<script>`, `<nav>`, `<footer>`, etc.) are skipped,
+just as in `clean()`. Empty or whitespace-only nodes are also skipped.
+
+### Replacement
+
+`replace_text_nodes()` uses `lol_html` (Cloudflare's streaming HTML rewriter) to
+walk the original HTML again. It maintains the same noise-tracking logic and a
+sequential counter. When the counter matches a replacement ID, the text is swapped
+in-place. Everything else — tags, attributes, `href`, `src`, `class`, `style`,
+comments, doctype — passes through untouched.
+
+The two functions are decoupled: you can extract once, send the text list to any
+external process (LLM, translation API, dictionary lookup, regex), and then replace.
+webshift does not care what happens to the text in between.
+
+### Consistency guarantee
+
+Both `extract_text_nodes` and `replace_text_nodes` use the same noise-tag set and
+the same skip logic (empty/whitespace filtering). This means node ID `3` in the
+`TextMap` always corresponds to the same text chunk that ID `3` will replace.
+If you call `replace_text_nodes` with the same text you extracted, the output HTML
+is byte-identical to the input (identity round-trip).
+
+### What is NOT modified
+
+- Tag names and nesting
+- All attributes: `href`, `src`, `class`, `style`, `id`, `data-*`, etc.
+- Text inside noise elements (left as-is, not counted)
+- Comments, CDATA, doctype declarations
+- Whitespace between tags
+
+---
+
 ## Configuration reference
 
 | Key | Default | Effect |

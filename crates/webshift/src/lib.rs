@@ -80,6 +80,84 @@ pub mod llm;
 pub use config::Config;
 
 // ---------------------------------------------------------------------------
+// text-map public types
+// ---------------------------------------------------------------------------
+
+/// A single text node extracted from HTML.
+///
+/// Each node corresponds to one non-empty, non-noise text node in the DOM,
+/// assigned a sequential 0-based [`id`](TextNode::id) in traversal order.
+/// Use [`id`](TextNode::id) to build a [`TextReplacement`] that targets this node.
+#[cfg(feature = "text-map")]
+#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TextNode {
+    /// Sequential 0-based index in DOM traversal order.
+    ///
+    /// IDs are assigned only to non-noise, non-empty (trimmed) text nodes,
+    /// and are guaranteed to be contiguous starting from `0`.
+    pub id: usize,
+    /// Trimmed text content of this node.
+    ///
+    /// Leading and trailing whitespace is removed; the original whitespace is
+    /// preserved in the HTML output when no replacement is supplied.
+    pub text: String,
+}
+
+/// Result of [`extract_text_nodes`]: an ordered list of content text nodes
+/// with the page title.
+///
+/// Pass [`nodes`](TextMap::nodes) (or a subset) to [`replace_text_nodes`] to
+/// rewrite the HTML while keeping all markup intact.
+///
+/// # Example
+///
+/// ```rust
+/// # #[cfg(feature = "text-map")] {
+/// let map = webshift::extract_text_nodes("<p>Hello <strong>world</strong></p>");
+/// assert_eq!(map.nodes[0].text, "Hello");
+/// assert_eq!(map.nodes[1].text, "world");
+/// # }
+/// ```
+#[cfg(feature = "text-map")]
+#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TextMap {
+    /// Ordered list of text nodes found outside noise elements (`<script>`,
+    /// `<style>`, `<nav>`, `<footer>`, `<header>`, `<aside>`, `<form>`,
+    /// `<iframe>`, `<noscript>`, `<svg>`, `<button>`, `<input>`, `<select>`,
+    /// `<textarea>`, `<head>`).
+    pub nodes: Vec<TextNode>,
+    /// Page title extracted from `<title>`, or an empty string if absent.
+    pub title: String,
+}
+
+/// A replacement instruction: change the text of a specific [`TextNode`] by
+/// its [`id`](TextNode::id).
+///
+/// Build these from a [`TextMap`] returned by [`extract_text_nodes`], then
+/// pass a slice to [`replace_text_nodes`].
+///
+/// # Example
+///
+/// ```rust
+/// # #[cfg(feature = "text-map")] {
+/// use webshift::TextReplacement;
+/// let r = TextReplacement { id: 0, text: "Ciao".into() };
+/// # }
+/// ```
+#[cfg(feature = "text-map")]
+#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]
+#[derive(Debug, Clone)]
+pub struct TextReplacement {
+    /// The [`TextNode::id`] of the node to replace.
+    pub id: usize,
+    /// New text content. HTML special characters (`<`, `>`, `&`) are escaped
+    /// automatically — pass plain text, not HTML markup.
+    pub text: String,
+}
+
+// ---------------------------------------------------------------------------
 // Public result types
 // ---------------------------------------------------------------------------
 
@@ -226,6 +304,84 @@ pub fn clean(raw_html: &str, max_chars: usize) -> CleanResult {
         truncated,
         char_count,
     }
+}
+
+/// Extract text nodes from HTML, skipping noise elements.
+///
+/// Parses `raw_html` and returns a [`TextMap`] containing one [`TextNode`] per
+/// non-empty, non-noise text node in DOM order. Noise elements (navigation,
+/// scripts, forms, head, etc.) are excluded. The page `<title>` is returned
+/// separately in [`TextMap::title`].
+///
+/// Node IDs are 0-based and contiguous. The same counter logic is used by
+/// [`replace_text_nodes`], so IDs from this call are valid targets for
+/// replacement without re-extracting.
+///
+/// # Example
+///
+/// ```rust
+/// # #[cfg(feature = "text-map")] {
+/// let html = r#"<html><head><title>My Page</title></head>
+/// <body><p>Hello <strong>world</strong></p></body></html>"#;
+///
+/// let map = webshift::extract_text_nodes(html);
+/// assert_eq!(map.title, "My Page");
+/// assert_eq!(map.nodes[0].text, "Hello");
+/// assert_eq!(map.nodes[1].text, "world");
+/// # }
+/// ```
+#[cfg(feature = "text-map")]
+#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]
+pub fn extract_text_nodes(raw_html: &str) -> TextMap {
+    let (nodes, title) = scraper::cleaner::extract_text_nodes(raw_html);
+    TextMap { nodes, title }
+}
+
+/// Rebuild HTML with replaced text nodes.
+///
+/// Rewrites `raw_html` using a streaming HTML rewriter: only text nodes whose
+/// [`id`](TextNode::id) appears in `replacements` are changed. Everything
+/// else — tags, attributes, `href`, `src`, `class`, `style`, `data-*`, inline
+/// scripts, and noise elements — is passed through byte-for-byte.
+///
+/// Node IDs must come from a prior [`extract_text_nodes`] call on the **same**
+/// HTML string. Passing IDs from a different document produces undefined
+/// replacement targets (no panic, but wrong nodes may be rewritten).
+///
+/// Replacement text is treated as plain text: `<`, `>`, and `&` are escaped
+/// automatically. Do not pass HTML markup as replacement values.
+///
+/// # Errors
+///
+/// Returns [`WebshiftError::Parse`] if the HTML rewriter encounters a fatal
+/// parsing error (rare in practice).
+///
+/// # Example
+///
+/// ```rust
+/// # #[cfg(feature = "text-map")] {
+/// use webshift::{extract_text_nodes, replace_text_nodes, TextReplacement};
+///
+/// let html = r#"<p>Hello <a href="https://example.com">world</a></p>"#;
+/// let map = extract_text_nodes(html);
+///
+/// let replacements = vec![
+///     TextReplacement { id: 0, text: "Ciao".into() },
+///     TextReplacement { id: 1, text: "mondo".into() },
+/// ];
+/// let result = replace_text_nodes(html, &replacements).unwrap();
+/// // href is untouched, only text changed:
+/// assert!(result.contains("Ciao"));
+/// assert!(result.contains(r#"href="https://example.com""#));
+/// # }
+/// ```
+#[cfg(feature = "text-map")]
+#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]
+pub fn replace_text_nodes(
+    raw_html: &str,
+    replacements: &[TextReplacement],
+) -> Result<String, WebshiftError> {
+    scraper::textmap::replace_text_nodes(raw_html, replacements)
 }
 
 /// Fetch and clean a single web page.

@@ -16,7 +16,12 @@
       "Bash(cargo search:*)",
       "mcp__mcp-serena__check_onboarding_performed",
       "mcp__mcp-server-github__pull_request_read",
-      "mcp__mcp-server-github__create_pull_request"
+      "mcp__mcp-server-github__create_pull_request",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo:*)",
+      "Bash(python3 -c \"import sys,base64; print\\(base64.b64decode\\(sys.stdin.read\\(\\)\\).decode\\(\\)\\)\")",
+      "Bash(git push:*)"
     ]
   }
 }

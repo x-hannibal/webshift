@@ -14,6 +14,7 @@ categories = ["text-processing", "web-programming"]
 default = ["backends"]
 backends = []
 llm = []
+text-map = ["lol_html"]
 
 [dependencies]
 # Async runtime
@@ -38,6 +39,9 @@ url = "2"
 
 # Directories (home dir for config file search)
 dirs-next = "2"
+
+# HTML streaming rewriter (text-map feature)
+lol_html = { version = "2", optional = true }
 
 # Error handling
 thiserror = "2"

@@ -313,3 +313,55 @@ allowed_domains = [
 
 When `allowed_domains` is set, **only** URLs from those domains are fetched.
 Everything else is silently dropped.
+
+---
+
+## 11. Translate HTML without breaking layout (text-map)
+
+**Who is this for?** You have HTML content (emails, web pages, CMS entries) and
+want an LLM to translate or rewrite the text while keeping the markup intact.
+Passing raw HTML to the model risks corrupting attributes, `href` values, and
+tag structure — especially with smaller models.
+
+**What you need:** The `text-map` feature.
+
+```toml
+# Cargo.toml
+webshift = { version = "0.3", default-features = false, features = ["text-map"] }
+```
+
+**Example: translate an HTML email**
+
+```rust
+use webshift::{extract_text_nodes, replace_text_nodes, TextReplacement};
+
+// 1. Extract text nodes from the original HTML
+let html = std::fs::read_to_string("email.html").unwrap();
+let text_map = extract_text_nodes(&html);
+
+// 2. Send only the text to your LLM / translation API
+//    The model never sees HTML tags, attributes, or href values.
+let mut replacements = Vec::new();
+for node in &text_map.nodes {
+    let translated = my_llm_translate(&node.text, "en", "it");
+    replacements.push(TextReplacement {
+        id: node.id,
+        text: translated,
+    });
+}
+
+// 3. Rebuild the HTML with translated text
+let translated_html = replace_text_nodes(&html, &replacements).unwrap();
+// → Same structure, same styling, same links — only the text changed.
+```
+
+**What you get:** the LLM translates plain strings (cheap, fast, no risk of
+tag corruption). webshift handles DOM parsing and reinsertion. The output HTML
+preserves every tag, attribute, `href`, `src`, and inline style from the original.
+
+**Partial replacement** is supported: if you only pass replacements for some
+node IDs, the rest stay unchanged. Useful for translating only the body text
+while leaving headers or footers in the original language.
+
+**Works offline:** no network access, no config file. Like `webshift::clean()`,
+the text-map functions are synchronous and self-contained.

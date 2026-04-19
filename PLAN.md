@@ -606,6 +606,149 @@ pub struct QueryResult {
 - [x] `extension.toml` + full settings schema (all CLI flags, passed as args)
 - [ ] **Deliverable:** Zed extension in marketplace
 
+### M7 — Text-map: DOM round-trip for content rewriting (3 days)
+
+Add a new `text-map` feature flag that enables **extraction of individual text nodes
+from HTML** and **reinsertion of modified text** back into the original markup. This
+gives callers a structured round-trip: extract → manipulate → rebuild HTML — without
+the LLM ever seeing or potentially corrupting tags, attributes, or `href` values.
+
+**Motivation:** `webshift::clean()` produces a flat string — ideal for read-only
+consumption by LLMs. But LLM agents that need to *rewrite* content inside HTML
+(translate, simplify, summarize inline, tone-shift) need to preserve the original
+DOM structure. Today this requires either passing raw HTML to the LLM (risking
+attribute corruption) or building a custom parser. `text-map` solves this generically.
+
+**Dependency:** `lol_html` (Cloudflare's streaming HTML rewriter, pure Rust, ~200 KB)
+for the reinsertion step. Gated behind the `text-map` feature flag — users who only
+need `clean()` or `fetch()` pay nothing.
+
+#### New public types
+
+```rust
+/// A single text node extracted from HTML.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TextNode {
+    /// Sequential index (0-based) in DOM traversal order.
+    pub id: usize,
+    /// The text content of this node, trimmed.
+    pub text: String,
+}
+
+/// Result of extracting text nodes from HTML.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TextMap {
+    /// Ordered list of text nodes found outside noise elements.
+    pub nodes: Vec<TextNode>,
+    /// Page title extracted from `<title>`, if present.
+    pub title: String,
+}
+
+/// A replacement entry: node id → new text.
+#[derive(Debug, Clone)]
+pub struct TextReplacement {
+    pub id: usize,
+    pub text: String,
+}
+```
+
+#### New public API
+
+```rust
+/// Extract text nodes from HTML, skipping noise elements.
+/// Returns a TextMap with sequential IDs in DOM order.
+/// Feature: `text-map`.
+pub fn extract_text_nodes(raw_html: &str) -> TextMap;
+
+/// Rebuild HTML with replaced text nodes.
+/// Only nodes present in `replacements` are changed; all others
+/// are left untouched. Tags, attributes, href, src, class, style
+/// are never modified.
+/// Feature: `text-map`.
+pub fn replace_text_nodes(
+    raw_html: &str,
+    replacements: &[TextReplacement],
+) -> Result<String, WebshiftError>;
+```
+
+#### Implementation approach
+
+- **`extract_text_nodes`** — reuses the existing `scraper`/html5ever DOM walk
+  from `clean_html()`. Same `NOISE_TAGS` filter, same traversal. Instead of joining
+  into a single string, collects `Vec<TextNode>` with sequential IDs. Lives in
+  `scraper/cleaner.rs` alongside `clean_html()`.
+
+- **`replace_text_nodes`** — uses `lol_html::rewrite_str()` with a text content
+  handler. The handler maintains a counter that increments on each non-noise,
+  non-empty text chunk (same traversal logic as extraction). When the counter
+  matches a replacement ID, the text is swapped. Since `lol_html` is a streaming
+  rewriter, it never parses the full DOM into memory — it rewrites on the fly.
+
+- **Noise-skip consistency** — both extract and replace must skip the same nodes.
+  `lol_html` uses element content handlers to track enter/exit of noise tags,
+  maintaining an `in_noise` depth counter. Only text chunks at `in_noise == 0`
+  are counted and eligible for replacement.
+
+#### Tasks
+
+- [x] Add `text-map` feature flag in `crates/webshift/Cargo.toml`
+- [x] Add `lol_html` dependency gated behind `text-map`
+- [x] Implement `extract_text_nodes()` in `scraper/cleaner.rs`
+- [x] Implement `replace_text_nodes()` in new `scraper/textmap.rs` module
+- [x] Export `TextNode`, `TextMap`, `TextReplacement` in `lib.rs` behind `#[cfg(feature = "text-map")]`
+- [x] Add `extract_text_nodes` + `replace_text_nodes` to public API in `lib.rs`
+- [x] Unit tests in `scraper/textmap.rs`: static HTML fixtures (see test plan below)
+- [x] Integration tests in `crates/webshift/tests/integration_textmap.rs`
+- [x] Add static HTML test fixtures in `crates/webshift/tests/fixtures/`
+- [x] Update README with text-map usage example
+- [x] **Deliverable:** `webshift::extract_text_nodes()` + `webshift::replace_text_nodes()` working with full test coverage
+
+#### Test plan
+
+Tests use **static HTML fixtures** stored in `crates/webshift/tests/fixtures/`.
+No network access required — all tests are deterministic and run in CI.
+
+**Fixture files:**
+
+| File | Content | Purpose |
+|------|---------|---------|
+| `simple.html` | Basic `<p>`, `<h1>`, `<span>` with plain text | Baseline extraction/replacement |
+| `newsletter.html` | Nested `<table>` layout with `<td>`, images with alt text, styled `<span>` | Realistic HTML email / newsletter |
+| `noise_heavy.html` | `<nav>`, `<script>`, `<footer>`, `<form>` mixed with content | Verify noise filtering consistency |
+| `multilingual.html` | Text in multiple languages (English, Italian, Chinese, Arabic) | Unicode handling, RTL text |
+| `attributes.html` | `<a href="...">`, `<img src="..." alt="...">`, inline `style`, `class` | Verify attributes are never modified |
+| `empty_nodes.html` | Whitespace-only text nodes, `<br>`, empty `<span>` | Edge case: empty/whitespace nodes skipped |
+| `fragmented.html` | Single sentence split across multiple `<span>` within a `<p>` | Fragmented text node handling |
+
+**Unit tests** (in `scraper/textmap.rs`):
+
+| Test | What it verifies |
+|------|------------------|
+| `extract_simple` | Correct node count, correct text, sequential IDs |
+| `extract_skips_noise` | Nodes inside `<nav>`, `<script>`, `<footer>` not in result |
+| `extract_empty_html` | Returns empty `TextMap` with no nodes |
+| `extract_preserves_order` | IDs follow DOM traversal order |
+| `extract_skips_whitespace_nodes` | Whitespace-only text nodes not included |
+| `extract_title` | `TextMap.title` correctly populated |
+| `replace_simple` | Replaced text appears in output HTML |
+| `replace_preserves_attributes` | `href`, `src`, `class`, `style` unchanged after replace |
+| `replace_preserves_structure` | Tag nesting identical before and after |
+| `replace_partial` | Only replaced IDs change; others stay original |
+| `replace_empty_replacements` | No replacements → output identical to input |
+| `replace_noise_nodes_untouched` | Text inside noise elements unchanged |
+| `replace_unicode` | Multilingual replacements (Chinese, Arabic, emoji) work |
+| `roundtrip_identity` | extract → replace with same text → HTML identical |
+
+**Integration tests** (in `tests/integration_textmap.rs`):
+
+| Test | What it verifies |
+|------|------------------|
+| `newsletter_roundtrip` | Extract from `newsletter.html`, replace all with uppercase, verify structure intact |
+| `selective_replace` | Extract from `newsletter.html`, replace only even-numbered nodes, verify odd ones unchanged |
+| `attributes_untouched` | Extract + replace on `attributes.html`, parse output, assert all href/src/class/style identical |
+| `noise_consistency` | Extract count from `noise_heavy.html` matches the count of replaceable nodes in `replace_text_nodes` |
+| `fragmented_text` | Extract from `fragmented.html`, verify each `<span>` fragment is a separate `TextNode` |
+
 ---
 
 ## 10. Testing strategy
@@ -703,15 +846,21 @@ declare `version.workspace = true`. A single `robot bump` call is sufficient.
 
 ## 12. Open questions
 
-1. **MCP SDK:** `rmcp` is the official Anthropic Rust SDK as of 2025. Use it from M2 onward.
-   Monitor for breaking changes on the 0.x series.
+1. ~~**MCP SDK:** `rmcp` is the official Anthropic Rust SDK as of 2025. Use it from M2 onward.
+   Monitor for breaking changes on the 0.x series.~~
+   **Resolved:** `rmcp` 1.x is stable and in use since M2. No breaking changes encountered.
 
-2. **WASM target for `webshift` library:** With the switch to pure-Rust `scraper`/html5ever,
+2. ~~**WASM target for `webshift` library:** With the switch to pure-Rust `scraper`/html5ever,
    a `wasm32-wasi` build is now architecturally possible. Gated behind a feature flag
-   (`wasm`) and out of scope for initial release, but no longer blocked by C deps.
+   (`wasm`) and out of scope for initial release, but no longer blocked by C deps.~~
+   **Superseded:** Still architecturally possible but not prioritized. The `text-map` feature
+   adds `lol_html` which also supports WASM, so no new blockers. Revisit if there's user demand.
 
-3. **Feature flags:** `llm` feature is optional (see §3). Consider also making individual
-   backends opt-in for users who only need one search provider.
+3. ~~**Feature flags:** `llm` feature is optional (see §3). Consider also making individual
+   backends opt-in for users who only need one search provider.~~
+   **Resolved:** Current flag granularity (`backends`, `llm`, `text-map`) covers all real use
+   cases. Per-backend flags would add complexity without practical benefit — unused backends
+   are dead code eliminated by the linker anyway.
 
 4. ~~**`webshift::clean()` as a standalone use case:** The cleaner is exposed as a first-class
    public API (not just an internal step). This opens a secondary audience: any Rust project

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.11] - 2026-04-19
+
+### Added
+
+- `text-map` feature: `extract_text_nodes()` and `replace_text_nodes()` public API for DOM round-trip content rewriting
+- `TextNode`, `TextMap`, and `TextReplacement` public types (gated behind `text-map` feature)
+- `lol_html` streaming rewriter dependency (optional, `text-map` feature only)
+- 7 HTML test fixtures (`simple`, `newsletter`, `noise_heavy`, `multilingual`, `attributes`, `empty_nodes`, `fragmented`)
+- 8 unit tests in `scraper::textmap` and 5 integration tests in `tests/integration_textmap.rs`
+- Full inline documentation with `# Example` blocks for all new public items, rendered on docs.rs with `#[cfg_attr(docsrs, doc(cfg(feature = "text-map")))]`
+- `robot test` now runs text-map–specific tests as a second targeted pass (`--lib scraper::textmap` + `--test integration_textmap`)
+
+---
+
 ## [0.2.10] - 2026-04-02
 
 ### Changed

@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![docs.rs](https://img.shields.io/docsrs/webshift)](https://docs.rs/webshift)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.10-purple.svg)](https://github.com/x-hannibal/webshift/releases/tag/v0.2.10)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.11-purple.svg)](https://github.com/x-hannibal/webshift/releases/tag/v0.2.11)
 [![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/x-hannibal/webshift/issues)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/x-hannibal/webshift/blob/main/LICENSE)
 <!--[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://modelcontextprotocol.io/specification/2025-11-25)-->
@@ -22,11 +22,12 @@ size budgets so the model receives only the content that matters.
 
 ### What you get
 
-Depending on the features you enable, WebShift can be three things:
+Depending on the features you enable, WebShift can be four things:
 
 | Use case | Crate | Feature flags | What it does |
 |----------|-------|---------------|--------------|
 | **HTML denoiser** | `webshift` | `default-features = false` | `clean()` — pure Rust HTML-to-text pipeline. Strips noise elements, sterilizes Unicode/BiDi, collapses whitespace. Zero network, zero config. Drop into any Rust project that processes web content for LLMs. |
+| **HTML text rewriter** | `webshift` | `features = ["text-map"]` | `extract_text_nodes()` + `replace_text_nodes()` — extract individual text nodes from HTML, manipulate them (translate, rewrite, simplify), and rebuild the HTML with structure intact. Tags, attributes, and links are never touched. |
 | **Web content client** | `webshift` | `default` or `features = ["llm"]` | `fetch()` + `query()` — streaming HTTP fetcher with size caps, 8 search backends, BM25 reranking, optional LLM query expansion and summarization. Full pipeline from search query to structured results. |
 | **MCP server** | `webshift-mcp` | all features | Native binary (`mcp-webshift`) that exposes `webshift_query`, `webshift_fetch`, and `webshift_onboarding` over MCP stdio. Single static binary, zero runtime dependencies. |
 
@@ -36,6 +37,8 @@ Depending on the features you enable, WebShift can be three things:
   budget-controlled text — not raw HTML.
 - You're processing web pages in a Rust pipeline and need a reliable
   HTML-to-text cleaner that strips noise without losing real content.
+- You need an LLM to translate, rewrite, or simplify text inside HTML
+  without corrupting the markup — text-map gives you a safe round-trip.
 - You want an MCP web search server that works as a single binary —
   no Python, no pip, no venv, no Docker (unless you want it).
 - You need hard guarantees on output size: per-page caps, total budget
@@ -45,8 +48,9 @@ Depending on the features you enable, WebShift can be three things:
 
 - You need a headless browser that renders JavaScript-heavy SPAs.
   WebShift parses static HTML — it doesn't execute JS.
-- You need to preserve the visual layout or formatting of a page
-  (tables, CSS grids, positioning). WebShift extracts text, not structure.
+- You need to render or screenshot a page preserving its visual layout.
+  WebShift processes HTML structure but does not render CSS or compute layout.
+  (Note: `text-map` does preserve the DOM structure for text rewriting use cases.)
 - You're building a web scraper that needs to navigate across pages,
   fill forms, or handle authentication flows.
 
@@ -107,6 +111,9 @@ webshift = "0.2"
 
 # Cleaner + fetcher only (no search backends)
 webshift = { version = "0.2", default-features = false }
+
+# Text-map only (extract/replace text nodes in HTML)
+webshift = { version = "0.2", default-features = false, features = ["text-map"] }
 
 # Everything including LLM features
 webshift = { version = "0.2", features = ["llm"] }
@@ -332,12 +339,36 @@ for source in &results.sources {
 }
 ```
 
+### Text-map: rewrite HTML content without breaking markup
+
+Extract text nodes, manipulate them (translate, rewrite, simplify), and rebuild
+the HTML with structure, attributes, and links intact.
+
+```rust
+use webshift::{extract_text_nodes, replace_text_nodes, TextReplacement};
+
+let html = r#"<p>Hello <a href="https://example.com">world</a></p>"#;
+let map = extract_text_nodes(html);
+// map.nodes = [(0, "Hello"), (1, "world")]
+
+let replacements = vec![
+    TextReplacement { id: 0, text: "Ciao".into() },
+    TextReplacement { id: 1, text: "mondo".into() },
+];
+let result = replace_text_nodes(html, &replacements).unwrap();
+// → <p>Ciao <a href="https://example.com">mondo</a></p>
+// href untouched, tags intact, only text changed.
+```
+
+Requires `features = ["text-map"]`. See [Use Cases #11](https://github.com/x-hannibal/webshift/blob/main/docs/USE_CASES.md#11-translate-html-without-breaking-layout-text-map) for a full translation example.
+
 ### Feature flags
 
 | Feature | Default | Enables |
 |---------|---------|---------|
 | `backends` | on | All search backends + query pipeline |
 | `llm` | off | LLM client, expander, summarizer, LLM reranking |
+| `text-map` | off | `extract_text_nodes()` + `replace_text_nodes()` — DOM round-trip for content rewriting |
 
 ---
 
