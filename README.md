@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/webshift.svg)](https://crates.io/crates/webshift)
 [![docs.rs](https://img.shields.io/docsrs/webshift)](https://docs.rs/webshift)
-[![Latest Release](https://img.shields.io/badge/release-v0.2.11-purple.svg)](https://github.com/x-hannibal/webshift/releases/tag/v0.2.11)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.12-purple.svg)](https://github.com/x-hannibal/webshift/releases/tag/v0.2.12)
 [![Beta](https://img.shields.io/badge/status-beta-blue.svg)](https://github.com/x-hannibal/webshift/issues)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/x-hannibal/webshift/blob/main/LICENSE)
 <!--[![MCP Protocol](https://img.shields.io/badge/MCP-Protocol-blueviolet)](https://modelcontextprotocol.io/specification/2025-11-25)-->
@@ -324,9 +324,13 @@ Always active — the core value proposition:
 ```rust
 use webshift::{Config, clean, fetch, query};
 
-// Clean raw HTML
+// Clean raw HTML — cap output at 8000 chars
 let result = clean("<html><body><p>Hello world</p></body></html>", 8000);
 println!("{}", result.text);
+
+// Pass 0 to disable the per-page cap entirely (no truncation)
+let full = clean("<html><body><p>Hello world</p></body></html>", 0);
+assert!(!full.truncated);
 
 // Fetch and clean a single page
 let config = Config::default();

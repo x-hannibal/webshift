@@ -246,6 +246,8 @@ per_page_limit = min(max_result_length, max_query_budget / num_sources)
               = min(8000, 16000 / 5) = 3200 chars per source
 ```
 
+> `max_result_length = 0` disables the per-page cap; only `max_query_budget` applies.
+
 Every source gets the same cap regardless of relevance score.
 
 ### Adaptive allocation (`adaptive_budget = "on"`)
@@ -422,7 +424,7 @@ is byte-identical to the input (identity round-trip).
 |-----|---------|--------|
 | `server.max_total_results` | `20` | Hard cap on sources returned |
 | `server.max_query_budget` | `32000` | Total char budget across all sources |
-| `server.max_result_length` | `8000` | Hard per-page char cap before budget math |
+| `server.max_result_length` | `8000` | Hard per-page char cap before budget math. `0` = no cap |
 | `server.max_download_mb` | `1` | Streaming cap per HTTP response |
 | `server.search_timeout` | `8` | Seconds per fetch |
 | `server.language` | `"en"` | BCP-47 hint passed to all backends (empty = let backend decide) |

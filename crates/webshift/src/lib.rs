@@ -186,6 +186,7 @@ pub struct FetchResult {
     /// Cleaned plain text content.
     pub text: String,
     /// `true` if the output was truncated to [`ServerConfig::max_result_length`](config::ServerConfig::max_result_length).
+    /// Always `false` when `max_result_length` is `0` (no-limit mode).
     pub truncated: bool,
     /// Length of `text` in bytes.
     pub char_count: usize,

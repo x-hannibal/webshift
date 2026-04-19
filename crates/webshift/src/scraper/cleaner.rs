@@ -259,8 +259,11 @@ pub fn extract_title(raw: &str) -> String {
 ///
 /// Returns `(windowed_text, truncated)`. Always cuts on a line boundary.
 /// If the very first line exceeds the budget, hard-truncates to `max_chars`.
+///
+/// Passing `max_chars = 0` disables truncation entirely and returns the full
+/// text unchanged with `truncated = false`.
 pub fn apply_window(text: &str, max_chars: usize) -> (String, bool) {
-    if text.len() <= max_chars {
+    if max_chars == 0 || text.len() <= max_chars {
         return (text.to_string(), false);
     }
     let mut buf: Vec<&str> = Vec::new();
@@ -281,7 +284,8 @@ pub fn apply_window(text: &str, max_chars: usize) -> (String, bool) {
 
 /// Full cleaning pipeline for a single page.
 ///
-/// Returns `(text, title, truncated)`.
+/// Returns `(text, title, truncated)`. Pass `max_chars = 0` to disable the
+/// per-page character cap (no truncation).
 pub fn process_page(raw_html: &str, snippet: &str, max_chars: usize) -> (String, String, bool) {
     let title = extract_title(raw_html);
     let mut text = clean_text(&clean_html(raw_html));
@@ -502,6 +506,14 @@ mod tests {
     fn apply_window_empty_text() {
         let (result, truncated) = apply_window("", 100);
         assert_eq!(result, "");
+        assert!(!truncated);
+    }
+
+    #[test]
+    fn apply_window_zero_means_no_limit() {
+        let text = "line one\nline two\nline three";
+        let (result, truncated) = apply_window(text, 0);
+        assert_eq!(result, text);
         assert!(!truncated);
     }
 }
